@@ -2,11 +2,17 @@ import os
 import torch
 import time
 import yaml
+import io
 from datetime import datetime
+from datasets import Dataset as HFDataset
+
+# Unsloth must be imported before TRL/Transformers
 from unsloth import FastVisionModel, is_bfloat16_supported
 from unsloth.chat_templates import get_chat_template, train_on_responses_only
 from trl import SFTTrainer, SFTConfig
 from transformers import TrainerCallback
+
+# Absolute imports from the project root
 from src.data.loader import get_dataloader
 from src.training.compute import configure_compute
 
@@ -22,16 +28,18 @@ class MI300XVerboseLogger(TrainerCallback):
             print(f"\n[METRICS - STEP {state.global_step}]")
             if len(state.log_history) > 0:
                 last_log = state.log_history[-1]
-                print(f"  Loss: {last_log.get('loss', 'N/A'):.4f} | LR: {last_log.get('learning_rate', 'N/A'):.2e}")
+                loss = last_log.get('loss', 'N/A')
+                lr = last_log.get('learning_rate', 'N/A')
+                print(f"  Loss: {loss} | LR: {lr}")
             
             print(f"  MI300X VRAM: {allocated:.2f}GB / 192GB (Reserved: {reserved:.2f}GB)")
             print(f"  Utilization: {(allocated/192.0)*100:.1f}%")
 
 def train():
-    # 0. Environment Setup
+    # 0. Initial Hardware Optimization
     configure_compute()
     
-    # 1. Load Configurations
+    # Load Configurations
     with open("configs/finetuning_config.yaml", "r") as f:
         cfg = yaml.safe_load(f)
     
@@ -40,14 +48,15 @@ def train():
     
     print(f"--- [INITIALIZING {cfg['project_name']} ON MI300X] ---")
     
-    # 2. Load Qwen3-VL-8B via Unsloth
+    # 1. Load Qwen3-VL-8B via Unsloth
+    # Note: On ROCm, we typically use 4-bit to keep the vision-temporal context wide
     model, tokenizer = FastVisionModel.from_pretrained(
         cfg['model']['base_model'],
         load_in_4bit = True,
         max_seq_length = MAX_SEQ_LENGTH,
     )
     
-    # 3. Inject LoRA Adapters (Targeting Vision & Language)
+    # 2. Inject LoRA Adapters
     model = FastVisionModel.get_peft_model(
         model,
         finetune_vision_layers = True,
@@ -59,15 +68,16 @@ def train():
         lora_dropout = 0,
     )
 
-    # 4. Apply Qwen 2.5/3 Chat Template
+    # 3. Apply the Qwen 2.5/3 Chat Template
     tokenizer = get_chat_template(tokenizer, chat_template="qwen2.5")
 
-    # 5. Multimodal "Thinking" Formatting Function
+    # 4. Multimodal "Thinking" Formatting Function
     def formatting_prompts_func(examples):
+        # examples is a dict of lists provided by HF .map()
         instructions = examples["instruction"]
         reasoning_blocks = examples["reasoning"] 
         actions = examples["action"]
-        images_list = examples["images"] # Sequences of tiled frames
+        images_sequences = examples["images"] # List of lists of PIL images
 
         texts = []
         for i in range(len(instructions)):
@@ -75,7 +85,7 @@ def train():
                 {
                     "role": "user",
                     "content": [
-                        {"type": "video", "video": images_list[i]}, 
+                        {"type": "video", "video": images_sequences[i]}, 
                         {"type": "text", "text": instructions[i]},
                     ],
                 },
@@ -90,22 +100,33 @@ def train():
         
         return { "text": texts }
 
-    # 6. Data Pipeline Initialization
+    # 5. Data Pipeline - The "Architect's Bridge"
     print(f"--- [SYNCING SPATIO-TEMPORAL DATASET] ---")
+    
+    # get_dataloader returns our custom NuRecTemporalDataset wrapped in a DataLoader
     train_loader = get_dataloader(
         "configs/data_config.yaml", 
         "configs/finetuning_config.yaml",
-        limit=None # Set a number here for testing
+        limit=None 
     )
     
-    # Map the formatting function to the dataset
-    dataset = train_loader.dataset.map(formatting_prompts_func, batched=True)
+    py_dataset = train_loader.dataset
+
+    # Bridge: Convert PyTorch Dataset to HuggingFace Dataset via generator
+    def gen():
+        for i in range(len(py_dataset)):
+            yield py_dataset[i]
+
+    hf_dataset = HFDataset.from_generator(gen)
+    
+    # Now we can use the HF .map() functionality
+    dataset = hf_dataset.map(formatting_prompts_func, batched=True)
     
     # Sanity Check
-    print(f"\n[ARCHITECT CHECK] Sample Prompt Structure:")
-    print(dataset[0]['text'][:600] + "...")
+    print(f"\n[ARCHITECT CHECK] Sample Prompt Structure (First 500 chars):")
+    print(dataset[0]['text'][:500] + "...")
 
-    # 7. Training Configuration
+    # 6. Training Configuration
     training_args = SFTConfig(
         output_dir = OUTPUT_DIR,
         per_device_train_batch_size = cfg['training']['batch_size'],
@@ -124,7 +145,7 @@ def train():
         save_steps = cfg['training']['save_steps'],
     )
 
-    # 8. SFTTrainer Execution
+    # 7. SFTTrainer Initialization
     trainer = SFTTrainer(
         model = model,
         tokenizer = tokenizer,
@@ -135,24 +156,26 @@ def train():
         callbacks = [MI300XVerboseLogger()],
     )
 
-    # Optimize to train only on assistant responses (Thinking + Action)
+    # 8. Train on Responses Only
+    # This ensures the model learns to output the <think> and Action blocks
     trainer = train_on_responses_only(
         trainer,
         instruction_part = "<|im_start|>user\n",
         response_part = "<|im_start|>assistant\n",
     )
 
-    print(f"\n--- [TRAINING COMMENCED] ---")
+    print(f"\n--- [TRAINING COMMENCED ON AMD INSTINCT MI300X] ---")
     start_time = time.time()
+    
     trainer.train()
     
-    # 9. Model Export
     total_time = (time.time() - start_time) / 3600
     print(f"--- [TRAINING COMPLETE] ---")
-    print(f"Duration: {total_time:.2f} hours. Saving to {OUTPUT_DIR}...")
+    print(f"Total Duration: {total_time:.2f} hours. Saving model to {OUTPUT_DIR}...")
     
+    # 9. Final Save (LoRA Adapters)
     model.save_pretrained_merged(OUTPUT_DIR, tokenizer, save_method = "lora")
-    print("Export successful.")
+    print("Export successful. Ready for Inference.")
 
 if __name__ == "__main__":
     train()
