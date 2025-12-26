@@ -4,13 +4,27 @@ dataset:
   local_dir: "/workspace/AMD-Vision-Omni/data"
 
 download:
-  max_concurrent: 8  # Optimal for AMD MI300X CPU core count
-  target_size_gb: 100
+  max_concurrent: 12
+  # NEW: Primary control for data scaling
+  target_chunks: 1 
+  # Secondary control for disk safety
+  target_size_gb: 150 
+
+schema:
+  time_col: "timestamp"
+  translation_cols: ["x", "y", "z"]
+  velocity_cols: ["vx", "vy"]
+  rotation_cols: ["qx", "qy", "qz", "qw"]
 
 processing:
-  sequence_length: 16 # Number of frames for Qwen3-VL temporal reasoning
-  cameras:
-    - "camera_front_wide_120fov"
-    - "camera_front_tele_30fov"
-    - "camera_rear_left_70fov"
-    - "camera_rear_right_70fov"
+  sequence_length: 16 
+  stride: 8 
+
+cameras:
+  - "camera_front_wide_120fov"
+  - "camera_front_tele_30fov"
+  - "camera_rear_left_70fov"
+  - "camera_rear_right_70fov"
+  - "camera_cross_left_120fov"
+  - "camera_cross_right_120fov"
+  - "camera_rear_tele_30fov"
