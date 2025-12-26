@@ -3,7 +3,7 @@ import torch
 import time
 import yaml
 from datetime import datetime
-from unsloth import FastVisionModel, is_bf16_supported
+from unsloth import FastVisionModel, is_bfloat16_supported
 from unsloth.chat_templates import get_chat_template, train_on_responses_only
 from trl import SFTTrainer, SFTConfig
 from transformers import TrainerCallback
@@ -113,8 +113,8 @@ def train():
         warmup_ratio = cfg['training']['warmup_ratio'],
         max_steps = cfg['training']['max_steps'],
         learning_rate = float(cfg['training']['learning_rate']),
-        fp16 = not is_bf16_supported(),
-        bf16 = is_bf16_supported(),
+        fp16 = not is_bfloat16_supported(),
+        bf16 = is_bfloat16_supported(),
         logging_steps = cfg['training']['logging_steps'],
         optim = cfg['training']['optimizer'],
         weight_decay = 0.05,
