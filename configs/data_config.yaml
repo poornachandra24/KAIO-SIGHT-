@@ -1,7 +1,7 @@
 dataset:
   repo_id: "nvidia/PhysicalAI-Autonomous-Vehicles"
   index_file: "clip_index.parquet"
-  local_dir: "/workspace/data"
+  local_dir: "/workspace/AMD-Vision-Omni/data"
 
 download:
   max_concurrent: 8  # Optimal for AMD MI300X CPU core count

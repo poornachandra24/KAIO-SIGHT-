@@ -1,0 +1,41 @@
+project_name: "AETHER-THINK-OMNI"
+
+model:
+  base_model: "unsloth/Qwen3-VL-8B-Instruct-bnb-4bit"
+  max_seq_length: 65536
+  lora_rank: 64
+  lora_alpha: 64
+
+training:
+  batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 1e-4
+  max_steps: 500
+  warmup_ratio: 0.1
+  logging_steps: 1
+  save_steps: 50
+  optimizer: "paged_adamw_8bit"
+
+vision:
+  # Options: "4-cam" or "7-cam"
+  camera_setup: "4-cam"
+  window_size: 16
+  # The loader will look at these keys based on camera_setup
+  setups:
+    4-cam:
+      grid: [2, 2]
+      cameras: 
+        - "camera_front_wide_120fov"
+        - "camera_front_tele_30fov"
+        - "camera_rear_left_70fov"
+        - "camera_rear_right_70fov"
+    7-cam:
+      grid: [3, 3]
+      cameras:
+        - "camera_front_wide_120fov"
+        - "camera_front_tele_30fov"
+        - "camera_cross_left_120fov"
+        - "camera_cross_right_120fov"
+        - "camera_rear_left_70fov"
+        - "camera_rear_right_70fov"
+        - "camera_rear_tele_30fov"
