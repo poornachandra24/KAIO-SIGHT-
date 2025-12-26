@@ -1,0 +1,16 @@
+dataset:
+  repo_id: "nvidia/PhysicalAI-Autonomous-Vehicles"
+  index_file: "clip_index.parquet"
+  local_dir: "/workspace/data"
+
+download:
+  max_concurrent: 8  # Optimal for AMD MI300X CPU core count
+  target_size_gb: 100
+
+processing:
+  sequence_length: 16 # Number of frames for Qwen3-VL temporal reasoning
+  cameras:
+    - "camera_front_wide_120fov"
+    - "camera_front_tele_30fov"
+    - "camera_rear_left_70fov"
+    - "camera_rear_right_70fov"
