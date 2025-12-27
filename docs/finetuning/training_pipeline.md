@@ -15,6 +15,7 @@ The training process is now decoupled from data setup.
     - Uses the pre-processed binary shards from `data/shards`.
 2.  **Stage 2: Push to Hub**
     - Automatically uploads the fine-tuned LoRA adapters to Hugging Face using `src/models/push_model.py`.
+    - **Model Hub**: [KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
 
 ## Usage
 

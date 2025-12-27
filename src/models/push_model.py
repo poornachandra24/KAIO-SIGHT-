@@ -4,7 +4,7 @@ from unsloth import FastVisionModel
 
 # --- CONFIG ---
 LOCAL_PATH = "checkpoints/AETHER-THINK-OMNI/checkpoint-60"
-HF_REPO = "Thunderbird2410/AETHER-THINK-OMNI-Qwen2.5-VL-LoRA-Adapters" # New name to avoid confusion
+HF_REPO = "Thunderbird2410/KAIO-SIGHT" # New name to avoid confusion
 # --------------
 
 def push():

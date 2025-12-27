@@ -9,7 +9,7 @@ import numpy as np
 BASE_MODEL_ID = "Qwen/Qwen2.5-VL-7B-Instruct"
 
 # 2. YOUR Adapter Repo (The small ~200MB one)
-ADAPTER_ID = "Thunderbird2410/AETHER-THINK-OMNI-Qwen2.5-VL-LoRA-Adapters"
+ADAPTER_ID = "Thunderbird2410/KAIO-SIGHT"
 
 VIDEO_PATH = "data/samples/25cd4769-5dcf-4b53-a351-bf2c5deb6124.camera_cross_right_120fov.mp4" 
 # --------------

@@ -1,7 +1,7 @@
 # Inference Flow
 
 ## Overview
-The inference stage demonstrates how the trained model (`Thunderbird2410/AETHER-THINK-OMNI-Qwen2.5-VL-LoRA`) processes new video data to predict ego-motion.
+The inference stage demonstrates how the trained model (`Thunderbird2410/KAIO-SIGHT`) processes new video data to predict ego-motion.
 
 ## The Script (`scripts/03_inference.sh`)
 This script wraps the Python inference logic for easy execution.
@@ -16,7 +16,7 @@ bash scripts/03_inference.sh
 ### Workflow
 1.  **Model Loading**:
     - Loads the **Base Model**: `Qwen/Qwen2.5-VL-7B-Instruct`.
-    - Loads the **LoRA Adapter**: `Thunderbird2410/AETHER-THINK-OMNI-Qwen2.5-VL-LoRA-Adapters`.
+    - Loads the **LoRA Adapter**: `Thunderbird2410/KAIO-SIGHT`.
     - Uses `FastVisionModel` with `bfloat16` precision.
 2.  **Input Processing**:
     - Reads a video file using `cv2`.
