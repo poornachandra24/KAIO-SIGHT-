@@ -1,27 +1,34 @@
 # Training Pipeline
 
 ## Overview
-The training pipeline is orchestrated by `scripts/run_train.sh`. It is designed to be a "Zero-Idle" system, ensuring that the GPU is constantly fed with data.
+## Overview
+The training pipeline is orchestrated by `scripts/02_finetune.sh`. It is designed to be a "Zero-Idle" system, ensuring that the GPU is constantly fed with data.
 
-## Orchestration (`scripts/run_train.sh`)
-The script follows a 3-stage process:
+## Configuration
+The pipeline is controlled by `configs/finetuning_config.yaml`. This file defines the model parameters, learning rates, and batch strategies. See [Configuration Docs](../architecture/configuration.md) for details.
 
-1.  **Stage 1: Audit & Ingestion**
-    - Checks if the required raw data chunks are present.
-    - Triggers `downloader.py` if data is missing.
-2.  **Stage 2: Offline ETL (Anti-Bottleneck)**
-    - Checks for pre-processed binary shards in `data/shards`.
-    - Triggers `prepare_dataset.py` if shards are missing. This ensures heavy preprocessing is done *before* training starts.
-3.  **Stage 3: Training**
+## Orchestration (`scripts/02_finetune.sh`)
+The training process is now decoupled from data setup.
+
+1.  **Stage 1: Training**
     - Launches the main training script: `python3 -m src.training.trainer`.
+    - Uses the pre-processed binary shards from `data/shards`.
+2.  **Stage 2: Push to Hub**
+    - Automatically uploads the fine-tuned LoRA adapters to Hugging Face using `scripts/push_model.py`.
 
-## Data Loading (`src/training/sharded_dataset.py`)
-To handle large datasets efficiently, we use a custom `ShardedDataset` class.
+## Usage
+
+```bash
+bash scripts/02_finetune.sh
+```
+
+## Data Loading (Map-Style Strategy)
+To handle large datasets efficiently while avoiding the "IterableDataset Slicing Bug" (see [ADR-002](../reports/decision_log.md)), we use a **Map-Style Dataset** approach.
 
 ### Key Features
-- **Streaming**: Inherits from `IterableDataset` to stream data from disk, keeping RAM usage low.
-- **Lazy Loading**: Only loads data when iterated upon.
-- **Multi-Worker**: Intelligently splits shards among PyTorch DataLoader workers.
+- **Mechanism**: Uses `datasets.load_from_disk` to load binary shards.
+- **Zero-Copy**: Leverages **Memory Mapping (`mmap`)** to access data directly from disk without loading it all into RAM.
+- **Consolidation**: Stitches multiple shards into a single virtual dataset using `concatenate_datasets`.
 
 ## Training Configuration
 Training parameters are defined in `configs/finetuning_config.yaml`. The system supports:

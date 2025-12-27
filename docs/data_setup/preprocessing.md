@@ -24,6 +24,9 @@ The `prepare_dataset.py` script implements a **GPU-Accelerated Turbo ETL** pipel
 ## Output
 The result is a set of binary shards in `data/processed_dataset` (or `data/shards` during intermediate steps). These shards are ready for direct streaming by the training loop.
 
-## Handling Challenges
-- **Arrow Overflow**: The script merges shards in batches to prevent Apache Arrow memory overflow issues.
-- **VRAM Contention**: The number of workers is tuned to balance CPU decompression and GPU processing without OOM errors.
+## Usage
+The ETL process is automatically managed by the setup script:
+
+```bash
+bash scripts/01_setup_data.sh
+```

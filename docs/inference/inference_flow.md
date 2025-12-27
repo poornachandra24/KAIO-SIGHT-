@@ -3,14 +3,21 @@
 ## Overview
 The inference stage demonstrates how the trained model (`Thunderbird2410/AETHER-THINK-OMNI-Qwen2.5-VL-LoRA`) processes new video data to predict ego-motion.
 
-## The Script (`src/inference/test_inference.py`)
-This script loads the fine-tuned model and runs inference on a sample video.
+## The Script (`scripts/03_inference.sh`)
+This script wraps the Python inference logic for easy execution.
+
+### Usage
+```bash
+bash scripts/03_inference.sh
+```
+
+## Inference Logic (`src/inference/test_inference.py`)
 
 ### Workflow
 1.  **Model Loading**:
-    - Uses `unsloth.FastVisionModel` for optimized loading.
-    - Loads the model in `bfloat16` (native precision for MI300X).
-    - Enables `FastVisionModel.for_inference(model)` for 2x speedup.
+    - Loads the **Base Model**: `Qwen/Qwen2.5-VL-7B-Instruct`.
+    - Loads the **LoRA Adapter**: `Thunderbird2410/AETHER-THINK-OMNI-Qwen2.5-VL-LoRA-Adapters`.
+    - Uses `FastVisionModel` with `bfloat16` precision.
 2.  **Input Processing**:
     - Reads a video file using `cv2`.
     - Extracts 16 frames uniformly.
@@ -18,7 +25,7 @@ This script loads the fine-tuned model and runs inference on a sample video.
 3.  **Prompt Construction**:
     - Creates a chat template message with the video frames and the instruction: `"Analyze the 4-cam sequence. Predict ego-motion."`.
 4.  **Generation**:
-    - Tokenizes the input and moves tensors to CUDA (MI300X).
+    - Tokenizes the input and moves tensors to rocm mapped to cuda (MI300X).
     - Generates the response using `model.generate`.
 5.  **Output**:
     - Decodes and prints the predicted action (displacement/velocity).

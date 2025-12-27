@@ -10,6 +10,22 @@ The data source is configured in `configs/data_config.yaml`. Key parameters incl
 - **local_dir**: `/workspace/AMD-Vision-Omni/data` (mapped inside the container)
 - **target_chunks**: Controls the scale of data to download.
 
+## Directory Structure
+The `data/` directory is organized as follows:
+
+```text
+data/
+├── .cache/              # Hugging Face cache
+├── camera/              # Extracted video clips (MP4)
+│   ├── camera_front/
+│   ├── camera_left/
+│   └── ...
+├── labels/              # Extracted kinematic labels (Parquet)
+├── samples/             # Debug samples
+├── shards/              # Processed binary Arrow shards (Ready for training)
+└── clip_index.parquet   # Dataset manifest
+```
+
 ## The Downloader (`src/data/downloader.py`)
 The `downloader.py` script is responsible for efficiently fetching data from Hugging Face.
 
@@ -22,7 +38,8 @@ The `downloader.py` script is responsible for efficiently fetching data from Hug
     - Uses `huggingface_hub` with `HF_HUB_ENABLE_HF_TRANSFER=1` for high-speed transfer.
 
 ## Usage
-The download is typically triggered automatically by the `run_train.sh` orchestration script if the local data is insufficient.
+## Usage
+The download is typically triggered automatically by the `scripts/01_setup_data.sh` orchestration script if the local data is insufficient.
 
 ```bash
 # Manual trigger (inside container)
