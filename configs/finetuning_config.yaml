@@ -1,14 +1,14 @@
 project_name: "AETHER-THINK-OMNI"
 
 model:
-  base_model: "unsloth/Qwen3-VL-8B-Instruct-bnb-4bit"
+  base_model: "Qwen/Qwen2.5-VL-7B-Instruct"
   max_seq_length: 65536
   lora_rank: 64
   lora_alpha: 64
 
 
 training:
-  batch_size: 2
+  batch_size: 1
   gradient_accumulation_steps: 8
   learning_rate: 1e-4
   num_epochs: 2 

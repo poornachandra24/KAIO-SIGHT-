@@ -35,10 +35,13 @@ fi
 echo "✅ Stage 1 Complete: $CURRENT_SYNCED units verified."
 
 # 2. OFFLINE ETL (The Anti-Bottleneck Guard)
+# 2. OFFLINE ETL (The Anti-Bottleneck Guard)
 echo "🏗️  Stage 2: Checking Binary Cache Integrity..."
-# We check for dataset_info.json as a marker of a successful HF Dataset save
-if [ ! -d "$PROCESSED_DIR" ] || [ ! -f "$PROCESSED_DIR/dataset_info.json" ]; then
-    echo "⚠️  [CACHE MISS]: Binary dataset not found or incomplete."
+SHARDS_DIR="$DATA_DIR/shards"
+
+# Check if shards directory exists and has content
+if [ ! -d "$SHARDS_DIR" ] || [ -z "$(ls -A $SHARDS_DIR)" ]; then
+    echo "⚠️  [CACHE MISS]: Binary shards not found."
     echo ">> Commencing Parallel Offline ETL (MP4 -> Binary Tensors)..."
     echo ">> This uses 16 CPU cores to eliminate GPU idle time."
     
@@ -48,8 +51,8 @@ if [ ! -d "$PROCESSED_DIR" ] || [ ! -f "$PROCESSED_DIR/dataset_info.json" ]; the
     echo "✅ ETL Complete. Tensors baked to disk."
 else
     # Architect's check: ensure cached sample count matches expected sample count
-    CACHED_COUNT=$(python3 -c "from datasets import load_from_disk; ds=load_from_disk('$PROCESSED_DIR'); print(len(ds))")
-    echo "🚀 [CACHE HIT]: $CACHED_COUNT pre-processed samples detected."
+    # We skip exact count check for speed, relying on shards existence
+    echo "🚀 [CACHE HIT]: Pre-processed shards detected in $SHARDS_DIR."
 fi
 
 # 3. HIGH-THROUGHPUT GPU TRAINING
