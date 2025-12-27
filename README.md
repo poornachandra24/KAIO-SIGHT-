@@ -163,8 +163,8 @@ graph LR
 ## Acknowledgments
 
 - [Unsloth](https://github.com/unslothai/unsloth) for efficient LLM fine-tuning
-- [Qwen-VL](https://github.com/QwenLM/Qwen-VL) for the vision-language model
-- [NVIDIA](https://huggingface.co/nvidia) for the PhysicalAI dataset
+- [Qwen-VL](https://huggingface.co/Qwen) for the vision-language model
+- [NVIDIA](https://huggingface.co/datasets/nvidia/PhysicalAI-Autonomous-Vehicles/tree/main) for the PhysicalAI dataset
 - [AMD ROCm](https://rocm.docs.amd.com/) for GPU compute support
 
 ## 📄 License
