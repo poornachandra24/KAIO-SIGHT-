@@ -7,7 +7,7 @@
 ## Optimizations Implemented
 
 ### 1. Native Bfloat16
-We bypassed 4-bit quantization (BNB) which causes kernel crashes on ROCm.
+We use 16-bit LoRA (Bfloat16) instead of 4-bit quantization (BNB) to ensure maximum stability and performance on MI300X.
 *   **Benefit:** 100% utilization of MI300X matrix cores.
 *   **VRAM Usage:** ~17GB / 192GB (leaving massive headroom for context scaling).
 

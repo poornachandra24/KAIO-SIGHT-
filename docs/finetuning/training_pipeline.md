@@ -14,7 +14,7 @@ The training process is now decoupled from data setup.
     - Launches the main training script: `python3 -m src.training.trainer`.
     - Uses the pre-processed binary shards from `data/shards`.
 2.  **Stage 2: Push to Hub**
-    - Automatically uploads the fine-tuned LoRA adapters to Hugging Face using `scripts/push_model.py`.
+    - Automatically uploads the fine-tuned LoRA adapters to Hugging Face using `src/models/push_model.py`.
 
 ## Usage
 
@@ -32,5 +32,10 @@ To handle large datasets efficiently while avoiding the "IterableDataset Slicing
 
 ## Training Configuration
 Training parameters are defined in `configs/finetuning_config.yaml`. The system supports:
-- **LoRA/QLoRA**: For efficient fine-tuning of large vision-language models.
+- **LoRA**: For efficient fine-tuning of large vision-language models (16-bit Bfloat16).
 - **Unsloth**: Integrated for faster training and memory efficiency.
+
+## 📊 Automated Reporting
+The pipeline automatically generates detailed training reports and hardware telemetry charts.
+- **Location**: `docs/reports/run_YYYY-MM-DD_...`
+- **Details**: See [Automated Reporting](./automated_reporting.md) for a guide on interpreting these reports.

@@ -3,7 +3,7 @@
 ## Overview
 To ensure high-throughput training on MI300X GPUs, we implement an "Offline ETL" strategy. Instead of processing raw video data on-the-fly (which can bottleneck the GPU), we pre-process the data into binary tensors.
 
-## The Pipeline (`src/data/prepare_dataset.py`)
+## The Pipeline (`src/data_etl/prepare_dataset.py`)
 The `prepare_dataset.py` script implements a **GPU-Accelerated Turbo ETL** pipeline.
 
 ### Key Features

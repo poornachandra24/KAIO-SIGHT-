@@ -12,7 +12,7 @@ Setting `target_chunks: 1` can result in over 33,000 training samples. This reve
 -   **The Math:** `1 Chunk` $\times$ `~100 Clips/Chunk` $\times$ `~28 Samples/Clip` = **Thousands of training samples.**
 
 ## 2. ETL Transformation
-*   **Trigger:** `src/data/prepare_dataset.py`.
+*   **Trigger:** `src/data_etl/prepare_dataset.py`.
 *   **Process:**
     1.  Unzip on-the-fly.
     2.  Extract 16 frames @ 10Hz.

@@ -26,7 +26,7 @@ data/
 └── clip_index.parquet   # Dataset manifest
 ```
 
-## The Downloader (`src/data/downloader.py`)
+## The Downloader (`src/data_etl/downloader.py`)
 The `downloader.py` script is responsible for efficiently fetching data from Hugging Face.
 
 ### Workflow
@@ -38,10 +38,9 @@ The `downloader.py` script is responsible for efficiently fetching data from Hug
     - Uses `huggingface_hub` with `HF_HUB_ENABLE_HF_TRANSFER=1` for high-speed transfer.
 
 ## Usage
-## Usage
 The download is typically triggered automatically by the `scripts/01_setup_data.sh` orchestration script if the local data is insufficient.
 
 ```bash
 # Manual trigger (inside container)
-python3 src/data/downloader.py --limit 10
+python3 src/data_etl/downloader.py --limit 10
 ```

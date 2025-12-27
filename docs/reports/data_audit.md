@@ -3,7 +3,7 @@
 ## Purpose
 The data audit ensures that the local dataset matches the expected configuration before training begins.
 
-## Audit Script (`src/data/audit.py`)
+## Audit Script (`src/data_etl/audit.py`)
 This script scans the `data/` directory and reports:
 - **Synced Chunks**: Number of chunks fully downloaded.
 - **Total Samples**: Estimated number of training samples.

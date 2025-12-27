@@ -2,255 +2,116 @@
 
 <div align="center">
 
-**A high-throughput vision-language model fine-tuning pipeline for autonomous vehicle reasoning**
+**Multi-View Vision-Language Reasoning for Autonomous Robotics**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.9+-red.svg)](https://pytorch.org/)
 [![AMD ROCm](https://img.shields.io/badge/AMD-ROCm%206.4-orange.svg)](https://rocm.docs.amd.com/)
+[![Status](https://img.shields.io/badge/Status-Experimental-yellow.svg)]()
 
 </div>
 
 ---
 
-## 📋 Overview
-
-AMD-Vision-Omni is an end-to-end training pipeline designed to fine-tune vision-language models (VLMs) for autonomous driving tasks. The project leverages **AMD MI300X GPUs** with ROCm, enabling high-speed training on multi-camera video sequences from the NVIDIA PhysicalAI Autonomous Vehicles dataset.
-
-### Key Features
-
-- 🎬 **Multi-Camera Temporal Processing** - Processes 4-cam or 7-cam setups with dynamic spatial tiling
-- 🧠 **Reasoning-Augmented Training** - Uses chain-of-thought style `<think>...action` formatting for enhanced reasoning
-- ⚡ **Zero-Idle GPU Utilization** - Offline ETL pipeline pre-processes video data to binary tensors, eliminating runtime bottlenecks
-- 🔧 **4-bit Quantized LoRA** - Efficient fine-tuning using Unsloth + PEFT with minimal VRAM footprint
-- 📊 **Automated Data Pipeline** - Download, audit, process, and train with a single command
+> [!IMPORTANT]
+> **Experimental Research Preview**
+> This project is a research prototype designed specifically for **AMD MI300X GPUs**. It relies on bleeding-edge ROCm libraries and custom kernel optimizations. Performance and stability on other hardware (NVIDIA/Intel) are not guaranteed.
 
 ---
 
-## 🏗️ Architecture
+## 🎯 The Problem: Spatial-Temporal Reasoning in Robotics
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        DATA PIPELINE                            │
-├─────────────────────────────────────────────────────────────────┤
-│  NVIDIA AV Dataset → Downloader → Raw Video → ETL → Binary Cache│
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                      TRAINING PIPELINE                          │
-├─────────────────────────────────────────────────────────────────┤
-│  Binary Cache → DataLoader → Qwen3-VL-8B → LoRA → Checkpoint    │
-└─────────────────────────────────────────────────────────────────┘
-```
+Autonomous vehicles and mobile robots operate in a complex, 360-degree world. Traditional vision models often process cameras independently or lack the temporal context to understand *motion* and *causality*.
 
-### Model Architecture
+**Key Challenges:**
+1.  **Multi-View Synchronization**: Stitching together disjoint camera feeds (Front, Rear, Left, Right) into a coherent spatial representation.
+2.  **Temporal Dynamics**: Understanding not just *where* an object is, but *where it is going* based on past frames.
+3.  **High-Throughput Training**: Processing high-resolution video streams from 7+ cameras requires massive compute and memory bandwidth.
 
-| Component | Details |
-|-----------|---------|
-| Base Model | `Qwen3-VL-8B-Instruct` (4-bit quantized via BitsAndBytes) |
-| Fine-tuning | LoRA with rank=64, alpha=64 on Q/K/V/O projections |
-| Max Sequence | 65,536 tokens |
-| Vision Encoder | Native Qwen VL vision tower |
+## 💡 The Solution: AMD-Vision-Omni
+
+**AMD-Vision-Omni** is an end-to-end training pipeline designed to fine-tune Large Vision-Language Models (VLMs) to "think" like a robot. By fusing multi-view video data into a unified spatial-temporal context, the model learns to predict egomotion and reason about driving scenarios.
+
+### Why AMD MI300X?
+This project leverages the massive 192GB VRAM and high memory bandwidth of the MI300X to handle:
+-   **Long Context Windows**: Up to 65,536 tokens for extended video sequences.
+-   **Large Batch Sizes**: Efficient gradient accumulation without OOM errors.
+-   **Native Bfloat16**: Accelerated training with mixed precision.
 
 ---
 
-## 📂 Project Structure
+## 🗺️ Navigating the Repository
 
-```
-AMD-Vision-Omni/
-├── configs/
-│   ├── data_config.yaml        # Dataset and download settings
-│   └── finetuning_config.yaml  # Model and training hyperparameters
-├── data/
-│   └── processed_dataset/      # Cached HuggingFace dataset (auto-generated)
-├── scripts/
-│   └── run_train.sh            # Main orchestration script
-├── src/
-│   ├── data/
-│   │   ├── audit.py            # Data integrity verification
-│   │   ├── downloader.py       # Parallel chunk downloader
-│   │   ├── loader.py           # PyTorch dataset with multi-cam tiling
-│   │   ├── prepare_dataset.py  # Offline CPU ETL pipeline
-│   │   └── processor.py        # Video frame extraction utilities
-│   ├── models/
-│   │   └── qwen_vl_arch.py     # Model initialization helpers
-│   └── training/
-│       ├── compute.py          # AMD GPU compute configuration
-│       └── trainer.py          # SFTTrainer with custom logging
-├── checkpoints/                # Training outputs
-├── requirements.txt
-└── LICENSE
-```
+This codebase is organized into modular components for Data ETL, Training, and Inference.
 
----
-
-## ⚙️ Installation
-
-### Prerequisites
-
-- Python 3.10+
-- AMD GPU with ROCm 6.4+ (tested on MI300X)
-- ~150GB disk space for dataset
-
-### Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/poornachandra24/AMD-Vision-Omni.git
-cd AMD-Vision-Omni
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-> **Note**: The `requirements.txt` includes PyTorch with ROCm support. For NVIDIA GPUs, modify the torch installation accordingly.
+| Directory | Description |
+| :--- | :--- |
+| **`scripts/`** | **Start Here.** Orchestration scripts for the full pipeline.<br>• `01_setup_data.sh`: Automated Data ETL.<br>• `02_finetune.sh`: Training & Model Push.<br>• `03_inference.sh`: Run predictions. |
+| **`src/data_etl/`** | **The Engine Room.** Handles raw video processing.<br>• `prepare_dataset.py`: GPU-accelerated video tiling and tokenization.<br>• `loader.py`: Custom PyTorch dataset for multi-view sequences. |
+| **`src/training/`** | **The Brain.** Training logic and optimizations.<br>• `trainer.py`: Main training loop with Unsloth integration.<br>• `callbacks.py`: Automated telemetry and reporting. |
+| **`configs/`** | **Control Panel.** YAML configuration files.<br>• `finetuning_config.yaml`: Hyperparameters (LR, Epochs, LoRA).<br>• `data_config.yaml`: Dataset sources and processing rules. |
+| **`docs/`** | **Knowledge Base.** Detailed documentation.<br>• [Architecture](./docs/architecture/)<br>• [Data Setup](./docs/data_setup/)<br>• [Finetuning](./docs/finetuning/) |
 
 ---
 
 ## 🚀 Quick Start
 
-### Option 1: Full Pipeline (Recommended)
+### Prerequisites
+-   **Hardware**: AMD MI300X GPU (or compatible ROCm device).
+-   **OS**: Linux (Ubuntu 22.04 recommended).
+-   **Storage**: ~150GB NVMe SSD for the dataset.
 
-Run the complete pipeline with a single command:
-
-```bash
-bash scripts/run_train.sh
-```
-
-This will:
-1. **Audit** - Check data integrity and download status
-2. **Download** - Fetch missing data chunks (configurable in `data_config.yaml`)
-3. **ETL** - Pre-process videos to binary tensors (runs once, cached)
-4. **Train** - Launch LoRA fine-tuning on MI300X
-
-### Option 2: Step-by-Step
+### Installation
 
 ```bash
-# 1. Audit existing data
-python src/data/audit.py
+git clone https://github.com/poornachandra24/AMD-Vision-Omni.git
+cd AMD-Vision-Omni
 
-# 2. Download data chunks
-python src/data/downloader.py --limit 5
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-# 3. Pre-process to binary cache
-python src/data/prepare_dataset.py
+### Running the Pipeline
 
-# 4. Train the model
-python -m src.training.trainer
+The entire workflow is automated via the `scripts/` directory:
+
+```bash
+# 1. Download & Process Data (ETL)
+./scripts/01_setup_data.sh
+
+# 2. Train the Model
+./scripts/02_finetune.sh
+
+# 3. Run Inference
+./scripts/03_inference.sh
 ```
 
 ---
 
-## ⚙️ Configuration
+## 🏗️ Architecture Overview
 
-### Data Configuration (`configs/data_config.yaml`)
-
-```yaml
-dataset:
-  repo_id: "nvidia/PhysicalAI-Autonomous-Vehicles"
-  local_dir: "/workspace/AMD-Vision-Omni/data"
-
-download:
-  target_chunks: 1      # Number of data chunks to download
-  target_size_gb: 150   # Disk space limit
-
-processing:
-  sequence_length: 16   # Frames per training sample
-  stride: 8             # Sliding window stride
+```mermaid
+graph LR
+    A[Raw Video Data] -->|ETL| B(Binary Shards)
+    B -->|Map-Style Load| C{AMD MI300X}
+    C -->|LoRA Finetune| D[Qwen-VL-Omni]
+    D -->|Inference| E[Action/Reasoning]
 ```
 
-### Training Configuration (`configs/finetuning_config.yaml`)
-
-```yaml
-model:
-  base_model: "unsloth/Qwen3-VL-8B-Instruct-bnb-4bit"
-  max_seq_length: 65536
-  lora_rank: 64
-  lora_alpha: 64
-
-training:
-  batch_size: 2
-  gradient_accumulation_steps: 8
-  learning_rate: 1e-4
-  num_epochs: 2
-  optimizer: "paged_adamw_8bit"
-
-vision:
-  camera_setup: "4-cam"  # Options: "4-cam" or "7-cam"
-  window_size: 16
-```
-
----
-
-## 📊 Dataset
-
-This project uses the [NVIDIA PhysicalAI Autonomous Vehicles](https://huggingface.co/datasets/nvidia/PhysicalAI-Autonomous-Vehicles) dataset, which provides:
-
-- Multi-camera video streams (7 cameras, various FOVs)
-- Egomotion labels (position, velocity, rotation)
-- High-quality driving scenarios
-
-### Camera Configurations
-
-| Setup | Cameras | Grid Layout |
-|-------|---------|-------------|
-| 4-cam | Front Wide, Front Tele, Rear Left, Rear Right | 2×2 |
-| 7-cam | 4-cam + Cross Left, Cross Right, Rear Tele | 3×3 |
-
----
-
-## 🔬 Training Output Format
-
-The model is trained to produce structured reasoning outputs:
-
-```
-<think>
-Avg Velocity: 5.23m/s. Total displacement: 42.15m.
-</think>
-Action: Displacement of 42.1 meters.
-```
-
----
-
-## 📈 Performance Notes
-
-- **VRAM Usage**: ~40-60GB on MI300X with 4-bit quantization
-- **Data Loading**: Near-zero GPU idle time with pre-processed binary cache
-- **Throughput**: Optimized for high-speed training with gradient accumulation
-
----
-
-## 🛣️ Roadmap
-
-- [ ] Multi-GPU distributed training support
-- [ ] Additional VLM backbones (LLaVA, InternVL)
-- [ ] Inference pipeline with real-time camera input
-- [ ] Extended temporal reasoning (>16 frames)
-- [ ] Integration with driving simulators
+-   **Base Model**: `Qwen2.5-VL-7B-Instruct`
+-   **Training Method**: 16-bit LoRA (Bfloat16) with Unsloth
+-   **Data Format**: Pre-tokenized binary shards (Arrow) for zero-overhead loading.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- [Unsloth](https://github.com/unslothai/unsloth) for efficient LLM fine-tuning
-- [Qwen-VL](https://github.com/QwenLM/Qwen-VL) for the vision-language model
-- [NVIDIA](https://huggingface.co/nvidia) for the PhysicalAI dataset
-- [AMD ROCm](https://rocm.docs.amd.com/) for GPU compute support
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
 <div align="center">
-
-**Made with ❤️ for the AMD GPU Pervasive AI Challenge**
-
+    <b>Experimental Code - Use at your own risk.</b><br>
+    Built for the AMD GPU Pervasive AI Challenge.
 </div>
