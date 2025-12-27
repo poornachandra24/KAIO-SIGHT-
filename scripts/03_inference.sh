@@ -9,7 +9,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 export PYTHONPATH=$PROJECT_ROOT
 
 echo "======================================================="
-echo "   PROJECT OMNI: INFERENCE PROTOCOL                    "
+echo "   PROJECT KAIO-SIGHT: INFERENCE PROTOCOL                    "
 echo "======================================================="
 
 cd "$PROJECT_ROOT"

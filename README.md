@@ -1,4 +1,4 @@
-# KAIØ-SIGHT 🚀
+# KAIØ-SIGHT 
 
 <div align="center">
 
@@ -74,7 +74,7 @@ This codebase is organized into modular components for Data ETL, Training, and I
 ## 📂 Project Structure
 
 ```
-AMD-Vision-Omni/
+KAIO-SIGHT/
 ├── configs/
 │   ├── data_config.yaml        # Dataset and download settings
 │   └── finetuning_config.yaml  # Model and training hyperparameters
@@ -118,8 +118,8 @@ AMD-Vision-Omni/
 ### Installation
 
 ```bash
-git clone https://github.com/poornachandra24/AMD-Vision-Omni.git
-cd AMD-Vision-Omni
+git clone https://github.com/poornachandra24/KAIO-SIGHT.git
+cd KAIO-SIGHT
 
 python -m venv .venv
 source .venv/bin/activate
@@ -151,7 +151,7 @@ The entire workflow is automated via the `scripts/` directory:
 graph LR
     A[Raw Video Data] -->|ETL| B(Binary Shards)
     B -->|Map-Style Load| C{AMD MI300X}
-    C -->|LoRA Finetune| D[Qwen-VL-Omni]
+    C -->|LoRA Finetune| D[Qwen-VL]
     D -->|Inference| E[Action/Reasoning]
 ```
 

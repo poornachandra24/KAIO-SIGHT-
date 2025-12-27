@@ -10,7 +10,7 @@ try:
 except Exception as e:
     print(f"⚠️ Could not increase file limit: {e}")
 
-os.environ["TRITON_CACHE_DIR"] = "/workspace/AMD-Vision-Omni/triton_cache"
+os.environ["TRITON_CACHE_DIR"] = "/workspace/KAIO-SIGHT/triton_cache"
 os.makedirs(os.environ["TRITON_CACHE_DIR"], exist_ok=True)
 
 import torch
@@ -25,7 +25,7 @@ from src.training.compute import configure_compute
 
 # --- CONFIG PATHS ---
 CONFIG_PATH = "configs/finetuning_config.yaml"
-SHARDS_PATH = "/workspace/AMD-Vision-Omni/data/shards"
+SHARDS_PATH = "/workspace/KAIO-SIGHT/data/shards"
 
 class MI300XVerboseLogger(TrainerCallback):
     def on_step_end(self, args, state, control, **kwargs):

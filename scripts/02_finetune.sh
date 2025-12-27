@@ -9,7 +9,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 export PYTHONPATH=$PROJECT_ROOT
 
 echo "======================================================="
-echo "   PROJECT OMNI: FINETUNE PROTOCOL                     "
+echo "   PROJECT KAIO-SIGHT: FINETUNE PROTOCOL                     "
 echo "======================================================="
 
 cd "$PROJECT_ROOT"

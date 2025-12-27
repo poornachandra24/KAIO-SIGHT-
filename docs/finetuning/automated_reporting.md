@@ -1,7 +1,7 @@
 # 📊 Automated Reporting
 
 ## Overview
-The **AMD-Vision-Omni** pipeline includes a built-in `AutomatedReportCallback` that generates detailed training reports and telemetry visualizations automatically. This ensures you have a permanent record of every training run's performance and hardware utilization.
+The **KAIO-SIGHT** pipeline includes a built-in `AutomatedReportCallback` that generates detailed training reports and telemetry visualizations automatically. This ensures you have a permanent record of every training run's performance and hardware utilization.
 
 ## Report Location
 Reports are generated in the `docs/reports` directory, organized by timestamp:

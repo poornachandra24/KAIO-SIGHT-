@@ -12,7 +12,7 @@ DATA_DIR="$PROJECT_ROOT/data"
 SHARDS_DIR="$DATA_DIR/shards"
 
 echo "======================================================="
-echo "   PROJECT OMNI: DATA SETUP PROTOCOL                   "
+echo "   PROJECT KAIO-SIGHT: DATA SETUP PROTOCOL                   "
 echo "======================================================="
 
 # 1. RAW DATA AUDIT & INGESTION

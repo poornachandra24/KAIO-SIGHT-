@@ -1,6 +1,6 @@
 # ⚙️ System Configuration
 
-The behavior of the Omni-Nav system is controlled by YAML configuration files located in the `configs/` directory. This decoupling allows for easy tuning of hyperparameters and data settings without modifying the codebase.
+The behavior of the KAIO-SIGHT system is controlled by YAML configuration files located in the `configs/` directory. This decoupling allows for easy tuning of hyperparameters and data settings without modifying the codebase.
 
 ## 1. Data Configuration (`configs/data_config.yaml`)
 Controls the data ingestion and preprocessing pipeline.
@@ -9,7 +9,7 @@ Controls the data ingestion and preprocessing pipeline.
 dataset:
   repo_id: "nvidia/PhysicalAI-Autonomous-Vehicles"  # Hugging Face Source
   index_file: "clip_index.parquet"
-  local_dir: "/workspace/AMD-Vision-Omni/data"      # Mapped Volume
+  local_dir: "/workspace/KAIO-SIGHT/data"      # Mapped Volume
 
 download:
   max_concurrent: 12  # Parallel downloads

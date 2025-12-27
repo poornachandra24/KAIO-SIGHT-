@@ -1,5 +1,5 @@
 # Physical AI Data Audit: 2025-12-26 16:42
-- **Data Root**: `/workspace/AMD-Vision-Omni/data`
+- **Data Root**: `/workspace/KAIO-SIGHT/data`
 - **Target Configuration**: `4-cam` (4 cameras)
 
 ## Integrity Summary

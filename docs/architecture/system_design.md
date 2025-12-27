@@ -1,7 +1,7 @@
 # 🏗️ System Architecture
 
 ## High-Level System Design
-The AMD-Vision-Omni system is designed as a high-throughput factory for converting raw autonomous vehicle video into reasoning capabilities.
+The KAIO-SIGHT system is designed as a high-throughput factory for converting raw autonomous vehicle video into reasoning capabilities.
 
 ```mermaid
 graph TD

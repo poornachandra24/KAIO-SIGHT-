@@ -247,7 +247,7 @@ def process_micro_batch(worker_id, chunk_id, clip_uuids, data_cfg_path, ft_cfg_p
 def prepare():
     from src.data_etl.loader import NuRecTemporalDataset
     
-    PROJECT_ROOT = "/workspace/AMD-Vision-Omni"
+    PROJECT_ROOT = "/workspace/KAIO-SIGHT"
     data_cfg = f"{PROJECT_ROOT}/configs/data_config.yaml"
     ft_cfg = f"{PROJECT_ROOT}/configs/finetuning_config.yaml"
     SHARD_DIR = f"{PROJECT_ROOT}/data/shards"

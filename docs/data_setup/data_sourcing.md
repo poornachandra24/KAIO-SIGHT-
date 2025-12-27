@@ -1,13 +1,13 @@
 # Data Sourcing and Downloading
 
 ## Overview
-The **AMD-Vision-Omni** project utilizes the `nvidia/PhysicalAI-Autonomous-Vehicles` dataset hosted on Hugging Face. This dataset provides rich, multi-view video data and kinematic labels for autonomous vehicle training.
+The **KAIO-SIGHT** project utilizes the `nvidia/PhysicalAI-Autonomous-Vehicles` dataset hosted on Hugging Face. This dataset provides rich, multi-view video data and kinematic labels for autonomous vehicle training.
 
 ## Configuration
 The data source is configured in `configs/data_config.yaml`. Key parameters include:
 - **repo_id**: `nvidia/PhysicalAI-Autonomous-Vehicles`
 - **index_file**: `clip_index.parquet`
-- **local_dir**: `/workspace/AMD-Vision-Omni/data` (mapped inside the container)
+- **local_dir**: `/workspace/KAIO-SIGHT/data` (mapped inside the container)
 - **target_chunks**: Controls the scale of data to download.
 
 ## Directory Structure

@@ -1,7 +1,7 @@
 dataset:
   repo_id: "nvidia/PhysicalAI-Autonomous-Vehicles"
   index_file: "clip_index.parquet"
-  local_dir: "/workspace/AMD-Vision-Omni/data"
+  local_dir: "/workspace/KAIO-SIGHT/data"
 
 download:
   max_concurrent: 12
