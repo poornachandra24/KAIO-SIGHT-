@@ -29,9 +29,9 @@ Autonomous vehicles and mobile robots operate in a complex, 360-degree world. Tr
 2.  **Temporal Dynamics**: Understanding not just *where* an object is, but *where it is going* based on past frames.
 3.  **High-Throughput Training**: Processing high-resolution video streams from 7+ cameras requires massive compute and memory bandwidth.
 
-## 💡 The Solution: AMD-Vision-Omni
+## 💡 The Solution: KAIØ-SIGHT
 
-**AMD-Vision-Omni** is an end-to-end training pipeline designed to fine-tune Large Vision-Language Models (VLMs) to "think" like a robot. By fusing multi-view video data into a unified spatial-temporal context, the model learns to predict egomotion and reason about driving scenarios.
+**KAIØ-SIGHT** is an end-to-end training pipeline designed to fine-tune Large Vision-Language Models (VLMs) to "think" like a robot. By fusing multi-view video data into a unified spatial-temporal context, the model learns to predict egomotion and reason about driving scenarios.
 
 ### Why AMD MI300X?
 This project leverages the massive 192GB VRAM and high memory bandwidth of the MI300X to handle:
