@@ -24,7 +24,7 @@ stdbuf -oL -eL python3 -m src.training.trainer
 echo "✅ Training Complete."
 
 # 2. PUSH TO HUB
-echo "🚀 Stage 2: Pushing Model to Hub..."
-python3 scripts/push_model.py
+echo "🚀 Stage 2: Pushing LORA adapters to Huggingface..."
+python3 src/models/push_model.py
 
 echo "🎉 Finetune & Push Complete."

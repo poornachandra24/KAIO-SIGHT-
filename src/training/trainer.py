@@ -2,7 +2,7 @@ import os
 import sys
 import resource
 
-# --- CONFIG: SYSTEM & CACHE ---
+# --- 1. SYSTEM CONFIGURATION ---
 try:
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
@@ -15,13 +15,15 @@ os.makedirs(os.environ["TRITON_CACHE_DIR"], exist_ok=True)
 
 import torch
 import yaml
+from torch.utils.data import Dataset
 from datasets import load_from_disk, concatenate_datasets
 from unsloth import FastVisionModel, is_bfloat16_supported, UnslothVisionDataCollator
 from trl import SFTTrainer, SFTConfig
 from transformers import TrainerCallback
+from src.training.callbacks import AutomatedReportCallback
 from src.training.compute import configure_compute
 
-# --- CONFIG: PATHS ---
+# --- CONFIG PATHS ---
 CONFIG_PATH = "configs/finetuning_config.yaml"
 SHARDS_PATH = "/workspace/AMD-Vision-Omni/data/shards"
 
@@ -33,25 +35,42 @@ class MI300XVerboseLogger(TrainerCallback):
             print(f"\n[STEP {state.global_step}/{state.max_steps}] "
                   f"VRAM Alloc: {allocated:.2f}GB | Res: {reserved:.2f}GB")
 
+# --- CUSTOM DATASET WRAPPER ---
+# This ensures strict type safety for the Unsloth Collator
+class LazyVisionDataset(Dataset):
+    def __init__(self, hf_dataset, transform_fn):
+        self.dataset = hf_dataset
+        self.transform_fn = transform_fn
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        return self.transform_fn(self.dataset[idx])
+
 def train():
+    # 2. LOAD CONFIG
     configure_compute()
     
+    if not os.path.exists(CONFIG_PATH):
+        raise FileNotFoundError(f"Config not found at {CONFIG_PATH}")
+
     with open(CONFIG_PATH, "r") as f: 
         cfg = yaml.safe_load(f)
 
     print(f"🚀 MI300X Optimization: Switching to Native Bfloat16...")
     
-    # 1. Model Loading
+    # 3. MODEL LOADING
     model, tokenizer = FastVisionModel.from_pretrained(
         cfg['model']['base_model'],
-        load_in_4bit=False,              # Disable 4-bit for MI300X
-        torch_dtype=torch.bfloat16,      # Native BF16
+        load_in_4bit=False,              
+        torch_dtype=torch.bfloat16,      
         max_seq_length=cfg['model']['max_seq_length'],
     )
     model.is_vision_model = True 
 
     # --- RESOLUTION CONFIG ---
-    TARGET_RES = 504
+    TARGET_RES = cfg['model'].get('resolution', 504)
     if hasattr(tokenizer, "image_processor"):
         target_pixels = TARGET_RES * TARGET_RES
         tokenizer.image_processor.min_pixels = target_pixels
@@ -66,7 +85,7 @@ def train():
         lora_alpha=cfg['model']['lora_alpha']
     )
 
-    # 2. Data Loading (Map-Style Strategy)
+    # 4. DATA LOADING
     print("🔄 Discovering shards...")
     shard_paths = []
     for root, dirs, files in os.walk(SHARDS_PATH):
@@ -75,58 +94,46 @@ def train():
                 shard_paths.append(os.path.join(root, d))
     shard_paths = sorted(shard_paths)
     
-    if not shard_paths:
-        if os.path.exists(os.path.join(SHARDS_PATH, "dataset_info.json")):
-             shard_paths.append(SHARDS_PATH)
+    if not shard_paths and os.path.exists(os.path.join(SHARDS_PATH, "dataset_info.json")):
+         shard_paths.append(SHARDS_PATH)
 
     print(f"📂 Loading {len(shard_paths)} shards as Map-Style Dataset...")
     datasets_list = [load_from_disk(p) for p in shard_paths]
     full_dataset = concatenate_datasets(datasets_list)
     print(f"✅ Consolidated Dataset: {len(full_dataset)} samples")
 
-    # 3. On-the-Fly Formatting (Transform)
-    def format_transform(examples):
-        # We must return a DICT of LISTS: {"messages": [msg1, msg2, ...]}
-        batch_messages = []
+    # 5. ROBUST SINGLE-ITEM TRANSFORM
+    def single_item_transform(example):
+        raw_frames = example["images"]
+        resized_frames = [frame.resize((TARGET_RES, TARGET_RES), resample=3) for frame in raw_frames]
         
-        # 'examples' is a dict of lists. examples["images"] is a list of lists (video sequences).
-        for i in range(len(examples["images"])):
-            raw_frames = examples["images"][i]
-            
-            # Resize each frame
-            resized_frames = [frame.resize((TARGET_RES, TARGET_RES), resample=3) for frame in raw_frames]
-            
-            msgs = [
-                {
-                    "role": "user", 
-                    "content": [
-                        {
-                            "type": "video", 
-                            "video": resized_frames,
-                        }, 
-                        {"type": "text", "text": examples["instruction"][i]}
-                    ]
-                },
-                {
-                    "role": "assistant", 
-                    "content": [
-                        {"type": "text", "text": f"<think>\n{examples['reasoning'][i]}\n</think>\nAction: {examples['action'][i]}"}
-                    ]
-                }
-            ]
-            batch_messages.append(msgs)
-            
-        return {"messages": batch_messages}
+        msgs = [
+            {
+                "role": "user", 
+                "content": [
+                    {"type": "video", "video": resized_frames}, 
+                    {"type": "text", "text": example["instruction"]}
+                ]
+            },
+            {
+                "role": "assistant", 
+                "content": [
+                    {"type": "text", "text": f"<think>\n{example['reasoning']}\n</think>\nAction: {example['action']}"}
+                ]
+            }
+        ]
+        return {"messages": msgs}
 
-    full_dataset.set_transform(format_transform)
+    # Wrap in PyTorch Dataset (Bypasses 'set_transform' batching logic)
+    train_dataset = LazyVisionDataset(full_dataset, single_item_transform)
 
-    # 4. Training Config
-    target_total_bs = cfg['training']['batch_size'] * cfg['training']['gradient_accumulation_steps']
-    new_grad_accum = target_total_bs // 1 
+    # 6. TRAINING CONFIG
+    target_bs = cfg['training']['batch_size'] * cfg['training']['gradient_accumulation_steps']
+    new_grad_accum = target_bs // 1 
 
-    print(f"📊 Training Strategy: Batch Size=1 | Grad Accum={new_grad_accum}")
+    print(f"📊 Training Strategy: Batch Size=1 | Grad Accum={new_grad_accum} | Effective BS={target_bs}")
 
-    # --- OPTIMIZATION: BYPASS UNSLOTH CHECKS ---
+    # OPTIMIZATION: Bypass Checks
     from unsloth_zoo import tokenizer_utils, training_utils
     def no_op(*args, **kwargs): return
     tokenizer_utils.fix_untrained_tokens = no_op
@@ -137,28 +144,35 @@ def train():
         model = model,
         tokenizer = tokenizer,
         data_collator = UnslothVisionDataCollator(model, tokenizer),
-        train_dataset = full_dataset,
+        train_dataset = train_dataset,
         args = SFTConfig(
             output_dir = f"checkpoints/{cfg.get('project_name', 'amd-vision-omni')}",
             per_device_train_batch_size = 1, 
             gradient_accumulation_steps = new_grad_accum,
-            warmup_steps = 5,
-            max_steps = 60,
+            
+            num_train_epochs = cfg['training']['num_epochs'],
+            max_steps = cfg['training']['max_steps'],
+            warmup_ratio = cfg['training'].get('warmup_ratio', 0.1),
+            
             fp16 = not is_bfloat16_supported(),
             bf16 = is_bfloat16_supported(),
+            
             learning_rate = float(cfg['training']['learning_rate']),
             optim = cfg['training']['optimizer'],
-            weight_decay = 0.01,
-            lr_scheduler_type = "linear",
-            logging_steps = 1,
+            weight_decay = cfg['training'].get('weight_decay', 0.01),
+            lr_scheduler_type = cfg['training'].get('lr_scheduler_type', "linear"),
+            
+            logging_steps = cfg['training'].get('logging_steps', 1),
             save_strategy = "steps",
-            save_steps = 20,
+            save_steps = cfg['training'].get('save_steps', 500),
+            save_total_limit = cfg['training'].get('save_total_limit', 3),
+            
             dataset_num_proc = 1,
             dataloader_num_workers = 0,
             max_seq_length = cfg['model']['max_seq_length'],
             report_to = "none",
         ),
-        callbacks = [MI300XVerboseLogger()]
+        callbacks = [MI300XVerboseLogger(), AutomatedReportCallback()]
     )
     
     print("🚀 MI300X: Commencing Full-Throttle Training...")
