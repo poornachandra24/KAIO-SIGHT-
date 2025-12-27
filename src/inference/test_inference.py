@@ -1,3 +1,4 @@
+import argparse
 from unsloth import FastVisionModel
 import torch
 from PIL import Image
@@ -9,7 +10,7 @@ import numpy as np
 BASE_MODEL_ID = "Qwen/Qwen2.5-VL-7B-Instruct"
 
 # 2. YOUR Adapter Repo (The small ~200MB one)
-ADAPTER_ID = "Thunderbird2410/KAIO-SIGHT"
+DEFAULT_ADAPTER_ID = "Thunderbird2410/KAIO-SIGHT"
 
 VIDEO_PATH = "data/samples/25cd4769-5dcf-4b53-a351-bf2c5deb6124.camera_cross_right_120fov.mp4" 
 # --------------
@@ -30,6 +31,11 @@ def get_video_frames(video_path, num_frames=16):
     return frames
 
 def run():
+    parser = argparse.ArgumentParser(description="Run inference with LoRA adapter")
+    parser.add_argument("--adapter_id", type=str, default=DEFAULT_ADAPTER_ID, help="HuggingFace adapter repo ID")
+    parser.add_argument("--revision", type=str, default=None, help="Specific commit hash/revision for the adapter")
+    args = parser.parse_args()
+
     print(f"🚀 Loading Base Model: {BASE_MODEL_ID}...")
     # 1. Load Base Model (Pure Qwen)
     model, tokenizer = FastVisionModel.from_pretrained(
@@ -39,8 +45,8 @@ def run():
     )
     
     # 2. Load Your Training (The Delta)
-    print(f"🔗 Attaching LoRA: {ADAPTER_ID}...")
-    model.load_adapter(ADAPTER_ID)
+    print(f"🔗 Attaching LoRA: {args.adapter_id} (Revision: {args.revision if args.revision else 'Latest'})...")
+    model.load_adapter(args.adapter_id, revision=args.revision)
 
     # 3. Optimize
     FastVisionModel.for_inference(model) 

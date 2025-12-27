@@ -15,6 +15,6 @@ echo "======================================================="
 cd "$PROJECT_ROOT"
 
 echo "🔮 Running Inference..."
-python3 src/inference/test_inference.py
+python3 src/inference/test_inference.py "$@"
 
 echo "🎉 Inference Complete."
