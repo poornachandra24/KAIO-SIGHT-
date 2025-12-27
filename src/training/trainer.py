@@ -167,7 +167,7 @@ def train():
             save_steps = cfg['training'].get('save_steps', 500),
             save_total_limit = cfg['training'].get('save_total_limit', 3),
             
-            dataset_num_proc = 1,
+            dataset_num_proc = 4,
             dataloader_num_workers = 0,
             max_seq_length = cfg['model']['max_seq_length'],
             report_to = "none",
