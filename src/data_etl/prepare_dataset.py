@@ -245,7 +245,7 @@ def process_micro_batch(worker_id, chunk_id, clip_uuids, data_cfg_path, ft_cfg_p
 
 # --- MAIN ORCHESTRATOR ---
 def prepare():
-    from src.data.loader import NuRecTemporalDataset
+    from src.data_etl.loader import NuRecTemporalDataset
     
     PROJECT_ROOT = "/workspace/AMD-Vision-Omni"
     data_cfg = f"{PROJECT_ROOT}/configs/data_config.yaml"

@@ -110,3 +110,9 @@ class NuRecTemporalDataset(Dataset):
             "reasoning": f"Avg Velocity: {v_avg:.2f}m/s. Total displacement: {dist:.2f}m.",
             "action": f"Displacement of {dist:.1f} meters."
         }
+
+def get_dataloader(data_cfg_path, ft_config_path, split='train', limit=None, batch_size=None, num_workers=0):
+    dataset = NuRecTemporalDataset(data_cfg_path, ft_config_path, split=split)
+    if limit:
+        dataset.samples = dataset.samples[:limit]
+    return DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False)

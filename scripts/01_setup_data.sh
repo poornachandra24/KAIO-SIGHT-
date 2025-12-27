@@ -24,7 +24,7 @@ cd "$PROJECT_ROOT"
 TARGET_UNITS=$(python3 -c "import yaml; print(yaml.safe_load(open('configs/data_config.yaml'))['download']['target_chunks'])")
 echo "   TARGET CAPACITY: $TARGET_UNITS Synchronized Chunks"
 
-AUDIT_OUT=$(python3 src/data/audit.py)
+AUDIT_OUT=$(python3 src/data_etl/audit.py)
 CURRENT_SYNCED=$(echo "$AUDIT_OUT" | grep "SYNCED_CHUNKS=" | cut -d'=' -f2)
 
 if [ -z "$CURRENT_SYNCED" ]; then
@@ -35,10 +35,10 @@ fi
 if [ "$CURRENT_SYNCED" -lt "$TARGET_UNITS" ]; then
     echo "📦 [DATA INCOMPLETE]: Only $CURRENT_SYNCED/$TARGET_UNITS chunks synced."
     echo ">> Initiating High-Speed Download..."
-    python3 src/data/downloader.py --limit "$TARGET_UNITS"
+    python3 src/data_etl/downloader.py --limit "$TARGET_UNITS"
     
     # Re-run audit
-    AUDIT_OUT=$(python3 src/data/audit.py)
+    AUDIT_OUT=$(python3 src/data_etl/audit.py)
     CURRENT_SYNCED=$(echo "$AUDIT_OUT" | grep "SYNCED_CHUNKS=" | cut -d'=' -f2)
 fi
 echo "✅ Stage 1 Complete: $CURRENT_SYNCED units verified."
@@ -53,7 +53,7 @@ if [ ! -d "$SHARDS_DIR" ] || [ -z "$(ls -A $SHARDS_DIR 2>/dev/null)" ]; then
     echo ">> This uses 16 CPU cores to eliminate GPU idle time."
     
     # Run the ETL script
-    python3 src/data/prepare_dataset.py
+    python3 src/data_etl/prepare_dataset.py
     
     echo "✅ ETL Complete. Tensors baked to disk."
 else

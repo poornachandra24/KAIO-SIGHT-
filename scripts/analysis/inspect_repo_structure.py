@@ -1,4 +1,7 @@
 from huggingface_hub import list_repo_files
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 import yaml
 
 def load_config(config_path):

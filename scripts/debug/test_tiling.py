@@ -1,6 +1,8 @@
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 import yaml
-from loader import get_dataloader
+from src.data_etl.loader import get_dataloader
 
 def test_tiling():
     print("--- [VERIFYING TEMPORAL TILING ARCHITECTURE] ---")
