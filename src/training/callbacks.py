@@ -34,9 +34,10 @@ def get_amd_metrics():
     return metrics
 
 class AutomatedReportCallback(TrainerCallback):
-    def __init__(self, output_dir="docs/reports"):
+    def __init__(self, output_dir="docs/reports", num_examples=0):
         self.output_dir = output_dir
         self.history = []
+        self.num_examples = num_examples
         self.start_time = time.time()
         self.step_buffer = {'power': [], 'temp': [], 'util': []}
         
@@ -201,6 +202,7 @@ class AutomatedReportCallback(TrainerCallback):
 **Duration:** {duration_hrs:.2f} hours  
 **Steps:** {max(steps)}  
 **Trainable Params:** {self.trainable_params:,} ({percent_trained:.2f}%)  
+**Total Samples**:{self.num_examples}
 
 | Metric | Value |
 |--------|-------|

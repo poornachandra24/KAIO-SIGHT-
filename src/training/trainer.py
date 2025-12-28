@@ -23,7 +23,6 @@ from transformers import TrainerCallback
 from src.training.callbacks import AutomatedReportCallback
 from src.training.compute import configure_compute
 
-# --- CONFIG PATHS ---
 CONFIG_PATH = "configs/finetuning_config.yaml"
 SHARDS_PATH = "/workspace/KAIO-SIGHT/data/shards"
 
@@ -31,53 +30,43 @@ class MI300XVerboseLogger(TrainerCallback):
     def on_step_end(self, args, state, control, **kwargs):
         if state.global_step % args.logging_steps == 0:
             allocated = torch.cuda.memory_allocated(0) / 1024**3
-            reserved = torch.cuda.memory_reserved(0) / 1024**3
-            print(f"\n[STEP {state.global_step}/{state.max_steps}] "
-                  f"VRAM Alloc: {allocated:.2f}GB | Res: {reserved:.2f}GB")
+            print(f"\n[STEP {state.global_step}] VRAM: {allocated:.2f}GB")
 
-# --- CUSTOM DATASET WRAPPER ---
-# This ensures strict type safety for the Unsloth Collator
 class LazyVisionDataset(Dataset):
     def __init__(self, hf_dataset, transform_fn):
         self.dataset = hf_dataset
         self.transform_fn = transform_fn
-
-    def __len__(self):
-        return len(self.dataset)
-
-    def __getitem__(self, idx):
-        return self.transform_fn(self.dataset[idx])
+    def __len__(self): return len(self.dataset)
+    def __getitem__(self, idx): return self.transform_fn(self.dataset[idx])
 
 def train():
-    # 2. LOAD CONFIG
     configure_compute()
     
-    if not os.path.exists(CONFIG_PATH):
-        raise FileNotFoundError(f"Config not found at {CONFIG_PATH}")
+    if not os.path.exists(CONFIG_PATH): raise FileNotFoundError(f"Missing {CONFIG_PATH}")
+    with open(CONFIG_PATH, "r") as f: cfg = yaml.safe_load(f)
 
-    with open(CONFIG_PATH, "r") as f: 
-        cfg = yaml.safe_load(f)
-
-    print(f"🚀 MI300X Optimization: Switching to Native Bfloat16...")
+    print(f"🚀 MI300X Pro Mode: Resolution {cfg['model']['resolution']}px | Frames {cfg['vision']['window_size']}")
     
-    # 3. MODEL LOADING
+    # 3. MODEL
     model, tokenizer = FastVisionModel.from_pretrained(
         cfg['model']['base_model'],
-        load_in_4bit=False,              
-        torch_dtype=torch.bfloat16,      
+        load_in_4bit=False,
+        torch_dtype=torch.bfloat16,
         max_seq_length=cfg['model']['max_seq_length'],
     )
     model.is_vision_model = True 
 
     # --- RESOLUTION CONFIG ---
     TARGET_RES = cfg['model'].get('resolution', 504)
+    TARGET_FRAMES = cfg['vision'].get('window_size', 16)
+    
+    # Configure Processor Bounds
     if hasattr(tokenizer, "image_processor"):
         target_pixels = TARGET_RES * TARGET_RES
         tokenizer.image_processor.min_pixels = target_pixels
         tokenizer.image_processor.max_pixels = target_pixels
-        print(f"✅ Image Processor clamped to {TARGET_RES}x{TARGET_RES}")
+        print(f"✅ Processor clamped to {TARGET_RES}x{TARGET_RES}")
 
-    # Apply LoRA
     model = FastVisionModel.get_peft_model(
         model, 
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
@@ -85,27 +74,27 @@ def train():
         lora_alpha=cfg['model']['lora_alpha']
     )
 
-    # 4. DATA LOADING
+    # 4. DATA
     print("🔄 Discovering shards...")
-    shard_paths = []
-    for root, dirs, files in os.walk(SHARDS_PATH):
-        for d in dirs:
-            if d.startswith("part_") or d.startswith("shard_"):
-                shard_paths.append(os.path.join(root, d))
-    shard_paths = sorted(shard_paths)
-    
-    if not shard_paths and os.path.exists(os.path.join(SHARDS_PATH, "dataset_info.json")):
-         shard_paths.append(SHARDS_PATH)
+    shard_paths = sorted([os.path.join(r, d) for r, ds, _ in os.walk(SHARDS_PATH) for d in ds if d.startswith(("part_", "shard_"))])
+    if not shard_paths and os.path.exists(os.path.join(SHARDS_PATH, "dataset_info.json")): shard_paths.append(SHARDS_PATH)
 
-    print(f"📂 Loading {len(shard_paths)} shards as Map-Style Dataset...")
+    print(f"📂 Loading {len(shard_paths)} shards (Map-Style)...")
     datasets_list = [load_from_disk(p) for p in shard_paths]
     full_dataset = concatenate_datasets(datasets_list)
-    print(f"✅ Consolidated Dataset: {len(full_dataset)} samples")
-
-    # 5. ROBUST SINGLE-ITEM TRANSFORM
+    
+    # 5. TRANSFORM (High Res + Temporal Sampling)
     def single_item_transform(example):
         raw_frames = example["images"]
-        resized_frames = [frame.resize((TARGET_RES, TARGET_RES), resample=3) for frame in raw_frames]
+        
+        # Temporal Sampling: Ensure we get exactly TARGET_FRAMES
+        # If we have more, sample uniformly. If less, duplicate last.
+        import numpy as np
+        indices = np.linspace(0, len(raw_frames)-1, TARGET_FRAMES).astype(int)
+        selected_frames = [raw_frames[i] for i in indices]
+
+        # Resize
+        resized_frames = [frame.resize((TARGET_RES, TARGET_RES), resample=3) for frame in selected_frames]
         
         msgs = [
             {
@@ -117,28 +106,28 @@ def train():
             },
             {
                 "role": "assistant", 
-                "content": [
-                    {"type": "text", "text": f"<think>\n{example['reasoning']}\n</think>\nAction: {example['action']}"}
-                ]
+                "content": [{"type": "text", "text": f"<think>\n{example['reasoning']}\n</think>\nAction: {example['action']}"}]
             }
         ]
         return {"messages": msgs}
 
-    # Wrap in PyTorch Dataset (Bypasses 'set_transform' batching logic)
     train_dataset = LazyVisionDataset(full_dataset, single_item_transform)
 
-    # 6. TRAINING CONFIG
-    target_bs = cfg['training']['batch_size'] * cfg['training']['gradient_accumulation_steps']
-    new_grad_accum = target_bs // 1 
+    # 6. CONFIGURATION
+    # Get num workers from yaml, default to 4 if not set
+    num_workers = cfg['training'].get('dataloader_num_workers', 4)
+    
+    bs = cfg['training']['batch_size']
+    ga = cfg['training']['gradient_accumulation_steps']
+    print(f"📊 Strategy: BS={bs} | GradAccum={ga} | Workers={num_workers} | Res={TARGET_RES}")
 
-    print(f"📊 Training Strategy: Batch Size=1 | Grad Accum={new_grad_accum} | Effective BS={target_bs}")
-
-    # OPTIMIZATION: Bypass Checks
+    # Bypass Checks
     from unsloth_zoo import tokenizer_utils, training_utils
     def no_op(*args, **kwargs): return
     tokenizer_utils.fix_untrained_tokens = no_op
     training_utils.fix_zero_training_loss = no_op
-    print("⚡ Unsloth Validation Checks bypassed.")
+
+    report_cb = AutomatedReportCallback(output_dir="docs/reports")
 
     trainer = SFTTrainer(
         model = model,
@@ -147,35 +136,34 @@ def train():
         train_dataset = train_dataset,
         args = SFTConfig(
             output_dir = f"checkpoints/{cfg.get('project_name', 'amd-vision-omni')}",
-            per_device_train_batch_size = 1, 
-            gradient_accumulation_steps = new_grad_accum,
-            
+            per_device_train_batch_size = bs, 
+            gradient_accumulation_steps = ga,
             num_train_epochs = cfg['training']['num_epochs'],
             max_steps = cfg['training']['max_steps'],
             warmup_ratio = cfg['training'].get('warmup_ratio', 0.1),
-            
             fp16 = not is_bfloat16_supported(),
             bf16 = is_bfloat16_supported(),
-            
             learning_rate = float(cfg['training']['learning_rate']),
             optim = cfg['training']['optimizer'],
             weight_decay = cfg['training'].get('weight_decay', 0.01),
             lr_scheduler_type = cfg['training'].get('lr_scheduler_type', "linear"),
-            
             logging_steps = cfg['training'].get('logging_steps', 1),
             save_strategy = "steps",
             save_steps = cfg['training'].get('save_steps', 500),
             save_total_limit = cfg['training'].get('save_total_limit', 3),
             
-            dataset_num_proc = 4,
-            dataloader_num_workers = 0,
+            # --- WORKER OPTIMIZATION ---
+            dataset_num_proc = 1, # Keep 1 for dataset loading
+            dataloader_num_workers = num_workers, # Parallelize the transform (resize)
+            # ---------------------------
+            
             max_seq_length = cfg['model']['max_seq_length'],
             report_to = "none",
         ),
-        callbacks = [MI300XVerboseLogger(), AutomatedReportCallback()]
+        callbacks = [MI300XVerboseLogger(), report_cb]
     )
     
-    print("🚀 MI300X: Commencing Full-Throttle Training...")
+    print("🚀 MI300X: Commencing Pro-Mode Training...")
     trainer.train()
 
 if __name__ == "__main__":
