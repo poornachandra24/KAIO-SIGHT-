@@ -3,6 +3,7 @@ import time
 import json
 import textwrap
 import subprocess
+import threading
 import matplotlib.pyplot as plt
 from transformers import TrainerCallback
 from datetime import datetime
@@ -34,31 +35,48 @@ def get_amd_metrics():
     return metrics
 
 class AutomatedReportCallback(TrainerCallback):
-    def __init__(self, output_dir="docs/reports", num_examples=0):
+    def __init__(self, output_dir="docs/reports", project_name="amd-vision-omni", base_model_name="Unknown", num_examples=0):
         self.output_dir = output_dir
+        self.project_name = project_name
+        self.base_model_name = base_model_name
+        self.run_dir = os.path.join(self.output_dir, self.project_name)
+        os.makedirs(self.run_dir, exist_ok=True)
+        
+        # Load existing history if resuming
+        self.history_path = os.path.join(self.run_dir, "history.json")
         self.history = []
+        if os.path.exists(self.history_path):
+            try:
+                with open(self.history_path, "r") as f:
+                    self.history = json.load(f)
+                print(f"RESUMED: Loaded {len(self.history)} logs from {self.history_path}")
+            except Exception as e:
+                print(f"⚠️ Failed to load history: {e}")
+
         self.num_examples = num_examples
         self.start_time = time.time()
         self.step_buffer = {'power': [], 'temp': [], 'util': []}
         
-        # Model Stats (Captured at start)
+        # Thread control
+        self.stop_event = threading.Event()
+        self.monitor_thread = None
+        self.lock = threading.Lock()
+        self.thread_buffer = {'power': [], 'temp': [], 'util': []}
+        
+        # Model Stats
         self.trainable_params = 0
         self.total_params = 0
-        self.model_arch = "Unknown"
+        self.model_arch = self.base_model_name
 
-        self.run_id = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.run_dir = os.path.join(self.output_dir, f"run_{self.run_id}")
-        os.makedirs(self.run_dir, exist_ok=True)
-
-        plt.switch_backend("Agg")
-        plt.style.use('bmh')
-        plt.rcParams.update({
-            "figure.figsize": (12, 10),
-            "font.size": 10,
-            "lines.linewidth": 1.5,
-            "axes.grid": True,
-            "grid.alpha": 0.3
-        })
+    def _monitor(self):
+        """Background thread to poll metrics at 2Hz"""
+        while not self.stop_event.is_set():
+            metrics = get_amd_metrics()
+            with self.lock:
+                self.thread_buffer['power'].append(metrics['power'])
+                self.thread_buffer['temp'].append(metrics['temp'])
+                self.thread_buffer['util'].append(metrics['util'])
+            time.sleep(0.5)
 
     def ema(self, data, alpha=0.1):
         ema_vals = []
@@ -72,14 +90,21 @@ class AutomatedReportCallback(TrainerCallback):
         if model:
             self.trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.total_params = sum(p.numel() for p in model.parameters())
-            self.model_arch = getattr(model.config, "architectures", ["Transformer"])[0]
+        
+        # Start monitoring thread
+        self.stop_event.clear()
+        self.monitor_thread = threading.Thread(target=self._monitor, daemon=True)
+        self.monitor_thread.start()
 
     def on_step_end(self, args, state, control, **kwargs):
-        """Poll Hardware every step"""
-        hw = get_amd_metrics()
-        self.step_buffer['power'].append(hw['power'])
-        self.step_buffer['temp'].append(hw['temp'])
-        self.step_buffer['util'].append(hw['util'])
+        """Transfer polled metrics from thread buffer to step buffer"""
+        with self.lock:
+            if self.thread_buffer['power']:
+                self.step_buffer['power'].extend(self.thread_buffer['power'])
+                self.step_buffer['temp'].extend(self.thread_buffer['temp'])
+                self.step_buffer['util'].extend(self.thread_buffer['util'])
+                # Clear thread buffer
+                self.thread_buffer = {'power': [], 'temp': [], 'util': []}
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         if not logs: return
@@ -102,18 +127,47 @@ class AutomatedReportCallback(TrainerCallback):
             entry['power_max'] = np.max(self.step_buffer['power'])
             entry['temp'] = np.max(self.step_buffer['temp'])
             entry['util'] = np.mean(self.step_buffer['util'])
+            entry['util_min'] = np.min(self.step_buffer['util'])
+            entry['util_max'] = np.max(self.step_buffer['util'])
         else:
             entry['power_avg'] = 0; entry['power_min'] = 0; entry['power_max'] = 0
-            entry['temp'] = 0; entry['util'] = 0
+            entry['temp'] = 0; entry['util'] = 0; entry['util_min'] = 0; entry['util_max'] = 0
 
         self.step_buffer = {'power': [], 'temp': [], 'util': []} # Reset
         self.history.append(entry)
+        
+        # Persist history
+        with open(self.history_path, "w") as f:
+            json.dump(self.history, f, indent=2)
+        
+        # --- COMET ML INTEGRATION ---
+        # Explicitly log our custom hardware metrics to Comet if active
+        try:
+            import comet_ml
+            experiment = comet_ml.get_global_experiment()
+            if experiment:
+                experiment.log_metrics({
+                    "hardware/vram_gb": entry.get("vram_gb", 0),
+                    "hardware/power_avg": entry.get("power_avg", 0),
+                    "hardware/power_peak": entry.get("power_max", 0),
+                    "hardware/temp_peak": entry.get("temp", 0),
+                    "hardware/gpu_util": entry.get("util", 0),
+                    "hardware/gpu_util_peak": entry.get("util_max", 0),
+                }, step=state.global_step)
+        except ImportError:
+            pass
+        except Exception as e:
+            # Don't crash training if logging fails
+            pass
 
         # Generate report every 5 logs
         if len(self.history) % 5 == 0: 
             self.generate_report(args)
 
     def on_train_end(self, args, state, control, **kwargs):
+        self.stop_event.set()
+        if self.monitor_thread:
+            self.monitor_thread.join(timeout=2.0)
         self.generate_report(args, final=True)
 
     def generate_report(self, args, final=False):
@@ -133,10 +187,12 @@ class AutomatedReportCallback(TrainerCallback):
         p_max = [x.get("power_max", 0) for x in self.history if "loss" in x]
         temp = [x.get("temp", 0) for x in self.history if "loss" in x]
         util = [x.get("util", 0) for x in self.history if "loss" in x]
+        util_min = [x.get("util_min", 0) for x in self.history if "loss" in x]
+        util_max = [x.get("util_max", 0) for x in self.history if "loss" in x]
 
         # --- PLOTTING (6-Panel) ---
         fig, axs = plt.subplots(3, 2, figsize=(14, 14))
-        fig.suptitle(f"MI300X Training Telemetry - {self.run_id}", fontsize=16)
+        fig.suptitle(f"MI300X Training Telemetry - {self.project_name}", fontsize=16)
 
         # 1. Loss
         axs[0, 0].plot(steps, losses, alpha=0.3, color="gray", label="Raw")
@@ -154,8 +210,9 @@ class AutomatedReportCallback(TrainerCallback):
         axs[1, 0].set_title("VRAM Usage (GB)")
 
         # 4. Utilization
-        axs[1, 1].plot(steps, util, color="#FFC300")
-        axs[1, 1].set_title("GPU Compute Utilization (Avg %)")
+        axs[1, 1].plot(steps, util, color="#FFC300", label="Avg")
+        axs[1, 1].fill_between(steps, util_min, util_max, color="#FFC300", alpha=0.2)
+        axs[1, 1].set_title("GPU Compute Utilization (%)")
         axs[1, 1].set_ylim(0, 105)
 
         # 5. Power
@@ -196,10 +253,10 @@ class AutomatedReportCallback(TrainerCallback):
         
         # --- GENERATE MARKDOWN ---
         md_content = textwrap.dedent(f"""
-# 📑 Training Report — {self.run_id}
+# 📑 Training Report — {self.project_name}
 
 **Status:** {status_icon}  
-**Project:** `{self.output_dir.split('/')[-2]}`  
+**Project:** `{self.project_name}`  
 
 ## 📊 Executive Summary
 **Duration:** {duration_hrs:.2f} hours  

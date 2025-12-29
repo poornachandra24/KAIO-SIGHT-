@@ -10,13 +10,10 @@ from huggingface_hub import HfApi
 CONFIG_PATH = "configs/finetuning_config.yaml"
 # --------------
 
-def get_latest_report(report_dir="docs/reports"):
-    """Finds the most recently created run directory and its report."""
-    runs = sorted(glob.glob(os.path.join(report_dir, "run_*")))
-    if not runs:
-        return None
-    latest_run = runs[-1]
-    report_path = os.path.join(latest_run, "report.md")
+def get_latest_report(project_name):
+    """Finds the report.md for the given project."""
+    # New Structure: docs/reports/<project_name>/report.md
+    report_path = os.path.join("docs", "reports", project_name, "report.md")
     if os.path.exists(report_path):
         return report_path
     return None
@@ -83,7 +80,7 @@ def push():
     print(f"✅ Done! Size should be ~200MB. Commit: {commit_hash}")
 
     # 5. Update Report
-    report_path = get_latest_report()
+    report_path = get_latest_report(project_name)
     if report_path:
         print(f"📝 Updating report at: {report_path}")
         with open(report_path, "a", encoding="utf-8") as f:

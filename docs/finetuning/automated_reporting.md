@@ -49,9 +49,10 @@ Generated via `AutomatedReportCallback` in `docs/reports`. Serves as a permanent
 
 ### 2. Comet ML Integration
 This system is natively integrated with **Comet ML** for live, remote monitoring.
--   **Enabled by**: Setting `report_to: ["comet_ml"]` in the trainer config (default).
+-   **Enabled by**: Setting `reporting.use_comet_ml: true` in `configs/finetuning_config.yaml` (default).
 -   **Features**: Real-time loss curves, system metrics, and hyperparameter tracking.
 -   **Setup**: Ensure `COMET_API_KEY` and `COMET_PROJECT_NAME` are set in your environment.
+-   **To Disable**: Set `use_comet_ml: false` in the config to rely solely on the local reports.
 
 ## Telemetry Visualization (`telemetry.png`)
 

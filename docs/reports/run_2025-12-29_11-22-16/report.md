@@ -97,3 +97,33 @@
 **Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
 **Commit:** `c7e9029e40204d9ea3bceb1e2465be50a80da10e`
 **Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/c7e9029e40204d9ea3bceb1e2465be50a80da10e/adapter_config.json)
+
+
+## 🚀 HuggingFace Deployment
+**Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
+**Commit:** `098d1b84979da84da48c3586f4d5f442ff827111`
+**Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/098d1b84979da84da48c3586f4d5f442ff827111/adapter_config.json)
+
+
+## 🚀 HuggingFace Deployment
+**Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
+**Commit:** `71cd2ddf5714cc2ad7310ac1124d49c70842d9ae`
+**Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/71cd2ddf5714cc2ad7310ac1124d49c70842d9ae/adapter_config.json)
+
+
+## 🚀 HuggingFace Deployment
+**Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
+**Commit:** `07ed155ded98742dce5f3973cc60919b634198ae`
+**Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/07ed155ded98742dce5f3973cc60919b634198ae/adapter_config.json)
+
+
+## 🚀 HuggingFace Deployment
+**Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
+**Commit:** `57c7030ea38a5a2f24e4116300055142f3373c08`
+**Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/57c7030ea38a5a2f24e4116300055142f3373c08/adapter_config.json)
+
+
+## 🚀 HuggingFace Deployment
+**Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
+**Commit:** `9b160f7b8e22607f341cdce3aa8376f5652688a2`
+**Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/9b160f7b8e22607f341cdce3aa8376f5652688a2/adapter_config.json)

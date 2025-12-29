@@ -75,7 +75,7 @@ def train():
 
     model = FastVisionModel.get_peft_model(
         model, 
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        target_modules=cfg['model'].get('target_modules', ["q_proj", "k_proj", "v_proj", "o_proj"]),
         rank=cfg['model']['lora_rank'], 
         lora_alpha=cfg['model']['lora_alpha']
     )
@@ -138,7 +138,11 @@ def train():
     tokenizer_utils.fix_untrained_tokens = no_op
     training_utils.fix_zero_training_loss = no_op
 
-    report_cb = AutomatedReportCallback(output_dir="docs/reports")
+    report_cb = AutomatedReportCallback(
+        output_dir="docs/reports",
+        project_name=cfg.get('project_name', 'amd-vision-omni'),
+        base_model_name=cfg['model']['base_model']
+    )
 
     trainer = SFTTrainer(
         model = model,
@@ -169,7 +173,7 @@ def train():
             # ---------------------------
             
             max_seq_length = cfg['model']['max_seq_length'],
-            report_to = ["comet_ml"],
+            report_to = ["comet_ml"] if cfg.get('reporting', {}).get('use_comet_ml', True) else "none",
         ),
         callbacks = [MI300XVerboseLogger(), report_cb]
     )
