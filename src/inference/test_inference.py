@@ -69,7 +69,7 @@ def run():
 
     # 5. Generate
     print("🧠 Thinking...")
-    outputs = model.generate(**inputs, max_new_tokens=128, use_cache=True, temperature=0.2)
+    outputs = model.generate(**inputs, max_new_tokens=1024, use_cache=True, temperature=0.2)
     print("\n Raw Output :\n", outputs)
     # 6. Decode
     decoded = tokenizer.batch_decode(outputs[:, inputs.input_ids.shape[1]:], skip_special_tokens=True)[0]

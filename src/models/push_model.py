@@ -59,7 +59,8 @@ def push():
     
     # 3. Push Adapters (Native PEFT method)
     # This guarantees NO merging happens. It only uploads the LoRA layers.
-    commit_info = model.push_to_hub(hf_repo)
+    commit_msg = f"Upload adapters for project: {project_name}"
+    commit_info = model.push_to_hub(hf_repo, commit_message=commit_msg)
     
     commit_hash = "unknown"
     if hasattr(commit_info, 'oid'):

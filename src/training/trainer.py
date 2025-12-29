@@ -2,6 +2,12 @@ import os
 import sys
 import resource
 
+# SILENCE COMET WARNING: Import before torch
+try:
+    import comet_ml
+except ImportError:
+    pass
+
 # --- 1. SYSTEM CONFIGURATION ---
 try:
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -163,7 +169,7 @@ def train():
             # ---------------------------
             
             max_seq_length = cfg['model']['max_seq_length'],
-            report_to = "none",
+            report_to = ["comet_ml"],
         ),
         callbacks = [MI300XVerboseLogger(), report_cb]
     )

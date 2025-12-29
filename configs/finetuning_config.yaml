@@ -1,4 +1,4 @@
-project_name: "KAIO-SIGHT Finetuning"
+project_name: "KAIO-SIGHT Finetuning-comet-ml-test"
 
 hub:
   hf_repo: "Thunderbird2410/KAIO-SIGHT"
@@ -9,14 +9,14 @@ model:
   lora_rank: 64
   lora_alpha: 128
   # Resolution settings used inside trainer.py logic
-  resolution: 1008 
+  resolution: 504
 
 training:
   # Batch Size Strategy for MI300X Stability
   # We force BS=1 in code to prevent broadcasting errors.
   # We use Grad Accumulation to reach the target effective batch size.
   batch_size: 8              # Keep 1 per device
-  gradient_accumulation_steps: 2  # Effective Batch Size = 32
+  gradient_accumulation_steps: 8  # Effective Batch Size = 32
   
   # Optimization
   learning_rate: 1e-4
@@ -27,21 +27,22 @@ training:
   
   # Duration
   num_epochs: 1               # Set to 1 for the first production run; this covers the entire dataset.
-  max_steps: -1               # -1 means "Run until num_epochs is finished"; else set a fixed number of steps.
+  max_steps: 10              # -1 means "Run until num_epochs is finished"; else set a fixed number of steps.
   
   # Scheduling
   warmup_ratio: 0.1           # Warmup for 10% of total steps
   lr_scheduler_type: "cosine"  # Cosine learning rate decay
   
   # Logging & Saving
-  logging_steps: 5            # Log loss every 5 steps
-  save_steps: 50            # Save checkpoint every 500 steps (~45-60 mins)
-  save_total_limit: 3         # Keep only the last 3 checkpoints to save disk space
+  logging_steps: 2            # Log loss every 5 steps
+  save_steps: 5            # Save checkpoint every 500 steps (~45-60 mins)
+  save_total_limit: 1         # Keep only the last 3 checkpoints to save disk space
 
 
 vision:
   # Options: "4-cam" or "7-cam"
-  camera_setup: "4-cam"
+  camera_setup: "7-cam"
+  #"4-cam"
   window_size: 16
   # The loader will look at these keys based on camera_setup
   setups:

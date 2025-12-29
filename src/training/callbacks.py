@@ -90,7 +90,10 @@ class AutomatedReportCallback(TrainerCallback):
         entry["timestamp"] = datetime.now().isoformat()
 
         if torch.cuda.is_available():
-            entry["vram_gb"] = torch.cuda.memory_allocated(0) / 1024**3
+            # Use max_memory_allocated to capture peak usage during the interval
+            entry["vram_gb"] = torch.cuda.max_memory_allocated(0) / 1024**3
+            # Reset peak stats for the next interval
+            torch.cuda.reset_peak_memory_stats(0)
         
         # Aggregate Hardware Metrics
         if self.step_buffer['power']:
