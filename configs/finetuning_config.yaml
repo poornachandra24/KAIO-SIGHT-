@@ -35,7 +35,7 @@ training:
   
   # Duration
   num_epochs: 1               # Set to 1 for the first production run; this covers the entire dataset.
-  max_steps: 50              # -1 means "Run until num_epochs is finished"; else set a fixed number of steps.
+  max_steps: -1              # -1 means "Run until num_epochs is finished"; else set a fixed number of steps.
   
   # Scheduling
   warmup_ratio: 0.1           # Warmup for 10% of total steps

@@ -127,14 +127,180 @@ def save_video(frames, output_path, fps=4):
     out.release()
     print(f"💾 Saved input video visualization to {output_path}")
 
+
+import re
+import time
+import threading
+import subprocess
+import queue
+
+class HardwareMonitor:
+    def __init__(self, interval=1.0):
+        self.interval = interval
+        self.stop_event = threading.Event()
+        self.metrics = {
+            "vram_used": [], "power_avg": [], "temp_edge": [], "temp_junc": []
+        }
+        self.thread = threading.Thread(target=self._monitor_loop)
+
+    def start(self):
+        self.stop_event.clear()
+        self.thread.start()
+
+    def stop(self):
+        self.stop_event.set()
+        self.thread.join()
+
+    def _monitor_loop(self):
+        while not self.stop_event.is_set():
+            try:
+                cmd = ["rocm-smi", "--showmeminfo", "vram", "--showpower", "--showtemp"]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode == 0: self._parse_smi(result.stdout)
+            except Exception as e: print(f"Monitor Warning: {e}")
+            time.sleep(self.interval)
+
+    def _parse_smi(self, output):
+        vram = re.search(r"VRAM Total Used Memory \(B\): (\d+)", output)
+        if vram: self.metrics["vram_used"].append(int(vram.group(1)) / 1024 / 1024)
+        pwr = re.search(r"Average Power \(W\): ([\d\.]+)", output)
+        if pwr: self.metrics["power_avg"].append(float(pwr.group(1)))
+        te = re.search(r"Temperature \(Sensor edge\) \(C\): ([\d\.]+)", output)
+        if te: self.metrics["temp_edge"].append(float(te.group(1)))
+        tj = re.search(r"Temperature \(Sensor junction\) \(C\): ([\d\.]+)", output)
+        if tj: self.metrics["temp_junc"].append(float(tj.group(1)))
+
+    def get_summary(self):
+        summary = {}
+        for k, v in self.metrics.items():
+            if v:
+                summary[f"{k}_min"] = min(v)
+                summary[f"{k}_max"] = max(v)
+                summary[f"{k}_avg"] = sum(v) / len(v)
+        return summary
+
+class AsyncVideoReader:
+    """Reads frames from a video file in a separate thread to prevent IO blocking"""
+    def __init__(self, path):
+        self.path = path
+        self.cap = cv2.VideoCapture(path)
+        self.is_valid = self.cap.isOpened()
+        self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)) if self.is_valid else 0
+        self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)) if self.is_valid else 1280
+        self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) if self.is_valid else 720
+        self.queue = queue.Queue(maxsize=32)
+        self.running = False
+        self.thread = None
+
+    def start(self, indices):
+        if not self.is_valid: return
+        self.running = True
+        self.thread = threading.Thread(target=self._worker, args=(indices,))
+        self.thread.start()
+
+    def _worker(self, indices):
+        current_idx = 0
+        indices_set = set(indices)
+        max_idx = max(indices) if len(indices) > 0 else 0
+        
+        while self.running and current_idx <= max_idx:
+            if current_idx in indices_set:
+                ret, frame = self.cap.read()
+                if not ret: break
+                # Convert BGR->RGB in worker thread to save main thread time
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                self.queue.put((current_idx, frame))
+            else:
+                # Skip frame
+                self.cap.read()
+            current_idx += 1
+        self.queue.put(None) # Sentinel
+
+    def get_frame(self):
+        if not self.is_valid: return None
+        item = self.queue.get()
+        if item is None: return None
+        return item[1]
+
+    def stop(self):
+        self.running = False
+        if self.thread: self.thread.join()
+        if self.cap: self.cap.release()
+
+def get_tiled_frames(uuid, data_dir, camera_list, grid, num_frames=16):
+    cols, rows = grid
+    
+    # Identify files
+    readers = {}
+    valid_readers = []
+    
+    print(f"🎬 Initializing threaded readers for {len(camera_list)} cameras...")
+    
+    for cam in camera_list:
+        path = os.path.join(data_dir, f"{uuid}.{cam}.mp4")
+        if not os.path.exists(path):
+             path = os.path.join(data_dir, f"{cam}.mp4")
+        
+        reader = AsyncVideoReader(path)
+        readers[cam] = reader
+        if reader.is_valid:
+            valid_readers.append(reader)
+        else:
+            print(f"⚠️ Warning: {cam} missing or invalid.")
+            
+    if not valid_readers:
+        raise ValueError(f"No valid videos found for {uuid}")
+
+    # Determine timing
+    min_frames = min([r.frame_count for r in valid_readers])
+    indices = np.linspace(0, min_frames - 1, num_frames).astype(int)
+    
+    # Start readers
+    for r in valid_readers:
+        r.start(indices)
+
+    tiled_frames = []
+    ref_w, ref_h = valid_readers[0].width, valid_readers[0].height
+    
+    print(f"🔄 Processing {num_frames} frames in parallel...")
+    
+    for _ in range(num_frames):
+        # Gather frames from all queues
+        current_imgs = []
+        for cam in camera_list:
+            reader = readers[cam]
+            frame = reader.get_frame()
+            
+            if frame is not None:
+                img = Image.fromarray(frame)
+            else:
+                img = Image.new('RGB', (ref_w, ref_h), (0, 0, 0))
+            current_imgs.append(img)
+            
+        # Tile
+        canvas = Image.new('RGB', (ref_w * cols, ref_h * rows), (0, 0, 0))
+        for idx, img in enumerate(current_imgs):
+            if idx >= cols * rows: break
+            c_x, c_y = idx % cols, idx // cols
+            canvas.paste(img, (c_x * ref_w, c_y * ref_h))
+            
+        tiled_frames.append(canvas)
+
+    # Cleanup
+    for r in readers.values():
+        r.stop()
+        
+    return tiled_frames
+
 def run():
     parser = argparse.ArgumentParser(description="Run inference with LoRA adapter on Multi-View Data")
-    parser.add_argument("--uuid", type=str, required=True, help="Sample UUID (e.g., 25cd4769...)")
-    parser.add_argument("--data_dir", type=str, default="data/samples", help="Directory containing the video files")
-    parser.add_argument("--adapter_id", type=str, default=DEFAULT_ADAPTER_ID, help="HuggingFace adapter repo ID")
-    parser.add_argument("--revision", type=str, default=None, help="Specific commit hash/revision")
-    parser.add_argument("--no_lora", action="store_true", help="Run base model only")
+    parser.add_argument("--uuid", type=str, required=True, help="Sample UUID")
+    parser.add_argument("--data_dir", type=str, default="data/samples")
+    parser.add_argument("--adapter_id", type=str, default=DEFAULT_ADAPTER_ID)
+    parser.add_argument("--revision", type=str, default=None)
+    parser.add_argument("--no_lora", action="store_true")
     parser.add_argument("--track", action="store_true", help="Enable Comet ML tracking")
+    parser.add_argument("--load_in_4bit", action="store_true", help="Use 4-bit quantization for speed/VRAM")
     args = parser.parse_args()
 
     # Load Config
@@ -160,55 +326,59 @@ def run():
                 "camera_setup": setup,
                 "model": BASE_MODEL_ID,
                 "adapter": args.adapter_id,
-                "revision": args.revision or "latest"
+                "revision": args.revision or "latest",
+                "quantization": "4bit" if args.load_in_4bit else "16bit"
             })
             experiment.add_tag("inference")
         else:
             print("⚠️ Comet ML requested but not installed. Skipping.")
-
-    print(f"⚙️  Config: {setup} ({len(camera_list)} cameras, Grid: {grid})")
-
-    # Load Frames
-    frames = get_tiled_frames(args.uuid, args.data_dir, camera_list, grid)
-    print(f"🎞️  Prepared {len(frames)} tiled frames.")
-
-    # Logging Input Video
-    if experiment:
-        temp_vid = "inference_input.mp4"
-        save_video(frames, temp_vid)
-        experiment.log_video(temp_vid, name=f"input_{args.uuid}", overwrite=True)
-        # Also log as an asset just in case
-        # experiment.log_asset(temp_vid)
-
-    # Load Model
-    print(f"🚀 Loading Base Model: {BASE_MODEL_ID}...")
-    model, tokenizer = FastVisionModel.from_pretrained(
-        BASE_MODEL_ID,
-        load_in_4bit=False,
-        torch_dtype=torch.bfloat16,
-    )
     
-    if not args.no_lora:
-        print(f"🔗 Attaching LoRA: {args.adapter_id} (Revision: {args.revision if args.revision else 'Latest'})...")
-        model.load_adapter(args.adapter_id, revision=args.revision)
-    
-    FastVisionModel.for_inference(model) 
+    # START MONITORING
+    monitor = HardwareMonitor(interval=0.5)
+    monitor.start()
 
-    # Prepare Input
-    messages = [
-        {"role": "user", "content": [
-            {"type": "video", "video": frames},
-            {"type": "text", "text": f"Analyze the {setup} sequence. Predict ego-motion."}
-        ]}
-    ]
-    
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    inputs = tokenizer(text=[text], videos=[frames], padding=True, return_tensors="pt")
-    inputs = inputs.to("cuda")
-
-    # Generate
-    print("🧠 Thinking...")
     try:
+        print(f"⚙️  Config: {setup} ({len(camera_list)} cameras, Grid: {grid})")
+
+        # Load Frames (Threaded)
+        frames = get_tiled_frames(args.uuid, args.data_dir, camera_list, grid)
+        print(f"🎞️  Prepared {len(frames)} tiled frames.")
+
+        # Logging Input Video
+        if experiment:
+            temp_vid = "inference_input.mp4"
+            save_video(frames, temp_vid)
+            experiment.log_video(temp_vid, name=f"input_{args.uuid}", overwrite=True)
+
+        # Load Model
+        print(f"🚀 Loading Base Model: {BASE_MODEL_ID} (4-bit: {args.load_in_4bit})...")
+        model, tokenizer = FastVisionModel.from_pretrained(
+            BASE_MODEL_ID,
+            load_in_4bit=args.load_in_4bit,
+            torch_dtype=torch.float16 if args.load_in_4bit else torch.bfloat16,
+        )
+        
+        if not args.no_lora:
+            print(f"🔗 Attaching LoRA: {args.adapter_id} (Revision: {args.revision if args.revision else 'Latest'})...")
+            model.load_adapter(args.adapter_id, revision=args.revision)
+        
+        FastVisionModel.for_inference(model) 
+
+        # Prepare Input
+        messages = [
+            {"role": "user", "content": [
+                {"type": "video", "video": frames},
+                {"type": "text", "text": f"Analyze the {setup} sequence. Predict ego-motion."}
+            ]}
+        ]
+        
+        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer(text=[text], videos=[frames], padding=True, return_tensors="pt")
+        inputs = inputs.to("cuda")
+
+        # Generate
+        print("🧠 Thinking (Metrics being captured directly from GPU user space)...")
+        
         outputs = model.generate(**inputs, max_new_tokens=1024, use_cache=True, temperature=0.2)
         
         # Decode
@@ -223,8 +393,19 @@ def run():
         if experiment: experiment.log_text(str(e), metadata={"type": "error"})
         raise e
     finally:
+        # STOP MONITORING AND LOG
+        monitor.stop()
+        stats = monitor.get_summary()
+        
+        if stats:
+            print("\n📊 INFERENCE HARDWARE STATS:")
+            for k, v in stats.items():
+                print(f"  {k}: {v:.2f}")
+                
+            if experiment:
+                 experiment.log_metrics(stats)
+
         if experiment:
-            # Check for temp file
             if os.path.exists("inference_input.mp4"):
                 os.remove("inference_input.mp4")
             experiment.end()
