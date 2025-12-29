@@ -1,10 +1,10 @@
-# 📑 Training Report — 2025-12-27_19-52-41
+# 📑 Training Report — 2025-12-28_06-06-05
 
 **Status:** 🔄 RUNNING  
 **Project:** `docs`  
 
 ## 📊 Executive Summary
-**Duration:** 9.93 hours  
+**Duration:** 0.38 hours  
 **Steps:** 675  
 **Trainable Params:** 10,092,544 (0.12%)  
 **Total Samples**:0
@@ -12,15 +12,15 @@
 | Metric | Value |
 |--------|-------|
 | Samples Processed | 10,800 |
-| **Initial Loss** | **6.2374** |
+| **Initial Loss** | **0.1172** |
 | **Final Loss** | **0.1297** |
 | Peak VRAM | 17.97 GB |
 | Avg VRAM | 17.97 GB |
-| Avg GPU Utilization | 49.4 % |
-| Avg Temp | 44.7 °C |
-| **Peak Power** | **467.0 W** |
-| Avg Power | 449.7 W |
-| **Total Energy** | **4.4675 kWh** |
+| Avg GPU Utilization | 50.1 % |
+| Avg Temp | 45.4 °C |
+| **Peak Power** | **464.0 W** |
+| Avg Power | 453.6 W |
+| **Total Energy** | **0.1718 kWh** |
 
 ---
 
@@ -52,13 +52,13 @@
     "learning_rate": 8.596048854208279e-05,
     "epoch": 0.3208685162846803,
     "step": 665,
-    "timestamp": "2025-12-28T05:39:52.699980",
-    "vram_gb": 17.970714569091797,
-    "power_avg": 448.8,
-    "power_min": 445.0,
-    "power_max": 451.0,
+    "timestamp": "2025-12-28T06:20:04.531721",
+    "vram_gb": 17.971139907836914,
+    "power_avg": 455.8,
+    "power_min": 451.0,
+    "power_max": 463.0,
     "temp": 45.0,
-    "util": 49.4
+    "util": 50.8
   },
   {
     "loss": 0.1217,
@@ -66,13 +66,13 @@
     "learning_rate": 8.566662180297725e-05,
     "epoch": 0.3232810615199035,
     "step": 670,
-    "timestamp": "2025-12-28T05:44:17.723869",
-    "vram_gb": 17.970714569091797,
-    "power_avg": 450.2,
+    "timestamp": "2025-12-28T06:24:26.371820",
+    "vram_gb": 17.971139907836914,
+    "power_avg": 450.8,
     "power_min": 444.0,
-    "power_max": 454.0,
-    "temp": 46.0,
-    "util": 49.6
+    "power_max": 464.0,
+    "temp": 45.0,
+    "util": 49.8
   },
   {
     "loss": 0.1297,
@@ -80,13 +80,13 @@
     "learning_rate": 8.537022494170764e-05,
     "epoch": 0.32569360675512665,
     "step": 675,
-    "timestamp": "2025-12-28T05:48:41.843861",
-    "vram_gb": 17.970714569091797,
-    "power_avg": 446.0,
-    "power_min": 434.0,
-    "power_max": 455.0,
+    "timestamp": "2025-12-28T06:28:48.811890",
+    "vram_gb": 17.971139907836914,
+    "power_avg": 453.8,
+    "power_min": 450.0,
+    "power_max": 457.0,
     "temp": 45.0,
-    "util": 48.6
+    "util": 49.8
   }
 ]
 ```

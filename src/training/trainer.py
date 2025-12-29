@@ -93,8 +93,13 @@ def train():
         indices = np.linspace(0, len(raw_frames)-1, TARGET_FRAMES).astype(int)
         selected_frames = [raw_frames[i] for i in indices]
 
-        # Resize
-        resized_frames = [frame.resize((TARGET_RES, TARGET_RES), resample=3) for frame in selected_frames]
+        # Resize only if necessary
+        resized_frames = []
+        for frame in selected_frames:
+            if frame.size != (TARGET_RES, TARGET_RES):
+                resized_frames.append(frame.resize((TARGET_RES, TARGET_RES), resample=3))
+            else:
+                resized_frames.append(frame)
         
         msgs = [
             {
@@ -153,7 +158,7 @@ def train():
             save_total_limit = cfg['training'].get('save_total_limit', 3),
             
             # --- WORKER OPTIMIZATION ---
-            dataset_num_proc = 1, # Keep 1 for dataset loading
+            dataset_num_proc = 8, # Keep 1 for dataset loading
             dataloader_num_workers = num_workers, # Parallelize the transform (resize)
             # ---------------------------
             
@@ -164,7 +169,18 @@ def train():
     )
     
     print("🚀 MI300X: Commencing Pro-Mode Training...")
-    trainer.train()
+    
+    # Check for existing checkpoints to resume
+    last_checkpoint = None
+    if os.path.exists(trainer.args.output_dir):
+        checkpoints = [d for d in os.listdir(trainer.args.output_dir) if d.startswith("checkpoint-")]
+        if checkpoints:
+            # Sort by step number
+            checkpoints.sort(key=lambda x: int(x.split("-")[1]))
+            last_checkpoint = os.path.join(trainer.args.output_dir, checkpoints[-1])
+            print(f"🔄 Resuming from checkpoint: {last_checkpoint}")
+
+    trainer.train(resume_from_checkpoint=last_checkpoint)
 
 if __name__ == "__main__":
     train()

@@ -23,7 +23,7 @@ training:
   optimizer: "paged_adamw_8bit"
   weight_decay: 0.01
   # Workers: Enable 8 CPU cores to prepare data in parallel
-  dataloader_num_workers: 4 
+  dataloader_num_workers: 8 
   
   # Duration
   num_epochs: 1               # Set to 1 for the first production run; this covers the entire dataset.
