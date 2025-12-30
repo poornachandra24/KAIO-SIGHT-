@@ -227,7 +227,7 @@ class AsyncVideoReader:
         if self.thread: self.thread.join()
         if self.cap: self.cap.release()
 
-def get_tiled_frames(uuid, data_dir, camera_list, grid, num_frames=16):
+def get_tiled_frames(uuid, data_dir, camera_list, grid, num_frames=4):
     cols, rows = grid
     
     # Identify files
@@ -301,6 +301,7 @@ def run():
     parser.add_argument("--no_lora", action="store_true")
     parser.add_argument("--track", action="store_true", help="Enable Comet ML tracking")
     parser.add_argument("--load_in_4bit", action="store_true", help="Use 4-bit quantization for speed/VRAM")
+    parser.add_argument("--project_name", type=str, default=None, help="Comet ML Project Name")
     args = parser.parse_args()
 
     # Load Config
@@ -308,7 +309,9 @@ def run():
     setup = cfg['vision']['camera_setup']
     camera_list = cfg['vision']['setups'][setup]['cameras']
     grid = cfg['vision']['setups'][setup]['grid']
-    project_name = cfg.get('project_name', 'amd-vision-omni')
+    
+    # Determine Project Name
+    project_name = args.project_name if args.project_name else cfg.get('project_name', 'amd-vision-omni')
 
     # Initialize Comet
     experiment = None
@@ -366,27 +369,37 @@ def run():
 
         # Prepare Input
         messages = [
+            {"role": "system", "content": ""}, # Explicitly empty system prompt to match training
             {"role": "user", "content": [
                 {"type": "video", "video": frames},
-                {"type": "text", "text": f"Analyze the {setup} sequence. Predict ego-motion."}
+                {"type": "text", "text": f"Analyze the {setup} sequence. Predict the ego-motion. Output ONLY the Displacement in meters and Velocity in m/s. Format: Displacement: <value> m, Velocity: <value> m/s"}
             ]}
         ]
         
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        print(f"DEBUG: PROMPT:\n{text}")
         inputs = tokenizer(text=[text], videos=[frames], padding=True, return_tensors="pt")
         inputs = inputs.to("cuda")
 
         # Generate
         print("🧠 Thinking (Metrics being captured directly from GPU user space)...")
+        # Generate
+        generated_ids = model.generate(**inputs, max_new_tokens=1024, temperature=0.001) # Near-greedy decoding
+        generated_ids_trimmed = [
+            out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+        ]
         
-        outputs = model.generate(**inputs, max_new_tokens=1024, use_cache=True, temperature=0.2)
+        print(f"DEBUG: Raw Token IDs: {generated_ids_trimmed}")
         
-        # Decode
-        decoded = tokenizer.batch_decode(outputs[:, inputs.input_ids.shape[1]:], skip_special_tokens=True)[0]
-        print(f"\n✅ PREDICTION:\n{decoded}")
+        output_text = tokenizer.batch_decode( # Changed processor to tokenizer
+            generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+        )[0]
+        
+        print(f"DEBUG: Raw Text Output: '{output_text}'")
+        print(f"\n✅ PREDICTION:\n{output_text}") # Changed decoded to output_text
 
         if experiment:
-            experiment.log_text(decoded, metadata={"type": "prediction"})
+            experiment.log_text(output_text, metadata={"type": "prediction"}) # Changed decoded to output_text
             
     except Exception as e:
         print(f"❌ Error during generation: {e}")
@@ -405,10 +418,11 @@ def run():
             if experiment:
                  experiment.log_metrics(stats)
 
-        if experiment:
-            if os.path.exists("inference_input.mp4"):
-                os.remove("inference_input.mp4")
-            experiment.end()
+    if experiment:
+        print(f"COMET_EXPERIMENT_NAME: {experiment.get_name()}")
+        if os.path.exists("inference_input.mp4"):
+            os.remove("inference_input.mp4")
+        experiment.end()
 
 if __name__ == "__main__":
     run()

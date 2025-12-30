@@ -1,4 +1,4 @@
-project_name: "KAIO-SIGHT Finetuning-comet-ml-telemetry-test"
+project_name: "KAIO-SIGHT Finetuning-BS-144"
 
 hub:
   hf_repo: "Thunderbird2410/KAIO-SIGHT"
@@ -23,8 +23,8 @@ training:
   # Batch Size Strategy for MI300X Stability
   # We force BS=1 in code to prevent broadcasting errors.
   # We use Grad Accumulation to reach the target effective batch size.
-  batch_size: 16              # Keep 1 per device
-  gradient_accumulation_steps: 8  # Effective Batch Size = 32
+  batch_size: 48              # Reduced from 64 (99%) to aim for ~75% VRAM
+  gradient_accumulation_steps: 3  # Effective Batch Size = 144
   
   # Optimization
   learning_rate: 1e-4
