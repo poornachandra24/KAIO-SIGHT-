@@ -1,11 +1,9 @@
-# Project Omni-Nav: A High-Throughput Physical AI Agent
+# Project KAIO-SIGHT: A High-Throughput Physical AI Agent
 
-**Project Omni-Nav is an end-to-end AI system for training a "Thinking" Vision-Language Model (VLM) on high-fidelity, multi-camera autonomous driving data. This architecture is specifically designed to saturate the 192GB HBM3 memory and 240GB System RAM of the AMD Instinct MI300X.**
+**Project KAIO-SIGHT is an end-to-end AI system for training a "Thinking" Vision-Language Model (VLM) on high-fidelity, multi-camera autonomous driving data. This architecture is specifically designed to saturate the 192GB HBM3 memory and 240GB System RAM of the AMD Instinct MI300X.**
 
 This system moves beyond simple image captioning to **Physical AI**, where the model learns to correlate visual motion with kinematic data to predict trajectories.
 
-![System Telemetry: 4-Camera Tiling](docs/debug_tiling_result.jpg)
-*Fig 1: A 4-camera tiled frame, representing a single moment of the model's 360° world-view before being resized for training.*
 
 ---
 
@@ -88,7 +86,19 @@ See [Full Decision Log](./reports/decision_log.md).
 
 ---
 
-## 5. Execution Workflow
+## 5. Experiment Tracking
+
+This project uses [Comet ML](https://www.comet.com/) for comprehensive experiment tracking during both training and inference:
+
+-   **Training Metrics**: Loss curves, learning rates, VRAM usage, and hardware telemetry are automatically logged.
+-   **Inference Evaluation**: Model performance is tracked across different HuggingFace adapter commits.
+-   **Live Dashboard**: View real-time inference results at the [Inference Test Dashboard](https://www.comet.com/poornachandra24/kaio-sight-inference-test/view/new/panels).
+
+All training runs automatically log to Comet ML with detailed hardware metrics (VRAM, power consumption) and model performance indicators.
+
+---
+
+## 6. Execution Workflow
 
 ### Step 1: Data Ingestion & ETL (Run ONCE)
 This is the longest step. It will download the raw data (if missing) and then use all available CPU cores to bake it into the binary format.
@@ -99,7 +109,7 @@ This is the longest step. It will download the raw data (if missing) and then us
 ```
 
 ### Step 2: Iterative Training
-Once the ETL is complete, you can run training experiments in minutes.
+Once the ETL is complete, you can run training experiments in minutes. Metrics are automatically logged to Comet ML.
 
 ```bash
 # Launch the GPU training

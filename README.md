@@ -63,11 +63,23 @@ This codebase is organized into modular components for Data ETL, Training, and I
 
 | Directory | Description |
 | :--- | :--- |
-| **`scripts/`** | **Start Here.** Orchestration scripts for the full pipeline.<br>• `01_setup_data.sh`: Automated Data ETL.<br>• `02_finetune.sh`: Training & Model Push.<br>• `03_inference.sh`: Run predictions. |
-| **`src/data_etl/`** | **The Engine Room.** Handles raw video processing.<br>• `prepare_dataset.py`: GPU-accelerated video tiling and tokenization.<br>• `loader.py`: Custom PyTorch dataset for multi-view sequences. |
-| **`src/training/`** | **The Brain.** Training logic and optimizations.<br>• `trainer.py`: Main training loop with Unsloth integration.<br>• `callbacks.py`: Automated telemetry and reporting. |
+| **`scripts/`** | **Start Here.** Orchestration scripts for the full pipeline.<br>• `01_setup_data.sh`: Automated Data ETL.<br>• `02_finetune.sh`: Training & Model Push.<br>• `03_inference.sh`: Run predictions.<br>• `analysis/`: Data analysis tools.<br>• `debug/`: Debugging utilities. |
+| **`src/data_etl/`** | **The Engine Room.** Handles raw video processing.<br>• `prepare_dataset.py`: GPU-accelerated video tiling and tokenization.<br>• `loader.py`: Custom PyTorch dataset for multi-view sequences.<br>• `downloader.py`: Downloads datasets from Hugging Face.<br>• `audit.py`: Data quality validation and auditing. |
+| **`src/training/`** | **The Brain.** Training logic and optimizations.<br>• `trainer.py`: Main training loop with Unsloth integration.<br>• `callbacks.py`: Automated telemetry and reporting.<br>• `compute.py`: Hardware metrics tracking (VRAM, power). |
+| **`src/inference/`** | **Prediction Engine.** Run inference on trained models.<br>• `test_inference.py`: Single-sample inference testing.<br>• `evaluate_commits.py`: Batch evaluation of HuggingFace commits.<br>• `prepare_inference_sample.py`: Prepare samples for testing. |
+| **`src/models/`** | **Model Utilities.** Architecture and deployment helpers.<br>• `push_model.py`: Push trained adapters to Hugging Face Hub.<br>• `qwen_vl_arch.py`: Model architecture metadata. |
 | **`configs/`** | **Control Panel.** YAML configuration files.<br>• `finetuning_config.yaml`: Hyperparameters (LR, Epochs, LoRA).<br>• `data_config.yaml`: Dataset sources and processing rules. |
-| **`docs/`** | **Knowledge Base.** Detailed documentation.<br>• [Architecture](./docs/architecture/README.md)<br>• [Data Setup](./docs/data_setup/README.md)<br>• [Finetuning](./docs/finetuning/README.md) |
+| **`docs/`** | **Knowledge Base.** Detailed documentation.<br>• [Architecture](./docs/architecture/README.md)<br>• [Data Setup](./docs/data_setup/README.md)<br>• [Finetuning](./docs/finetuning/README.md)<br>• [Inference](./docs/inference/)<br>• [Data Audit](./docs/data_audit/)<br>• [Reports](./docs/reports/) |
+
+### 📊 Experiment Tracking
+
+This project uses [Comet ML](https://www.comet.com/) for comprehensive experiment tracking during both training and inference:
+
+- **Training Metrics**: Loss curves, learning rates, VRAM usage, and hardware telemetry
+- **Inference Evaluation**: Model performance across different HuggingFace commits
+- **[Inference Test Dashboard](https://www.comet.com/poornachandra24/kaio-sight-inference-test/view/new/panels)**: Live dashboard for commit evaluation results
+
+All training runs automatically log to Comet ML with detailed hardware metrics (VRAM, power consumption) and model performance indicators.
 
 ---
 
