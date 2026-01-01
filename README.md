@@ -84,7 +84,7 @@ This project uses [Comet ML](https://www.comet.com/) for comprehensive experimen
 - **Training Metrics**: Loss curves, learning rates, VRAM usage, and hardware telemetry
 - **Inference Evaluation**: Model performance across different HuggingFace commits
 - **[Inference Test Dashboard](https://www.comet.com/poornachandra24/kaio-sight-inference-test/view/new/panels)**: Live dashboard for commit evaluation results
- <img width="1907" height="980" alt="image" src="https://github.com/user-attachments/assets/c6d5fb8c-324b-4290-bcf1-dc3b854e2ce6" />
+
  <img width="1905" height="882" alt="image" src="https://github.com/user-attachments/assets/f58eb59a-6d04-418d-bcf7-95806d3bb449" />
 
 All finetuning runs automatically log to Comet ML with detailed hardware metrics (VRAM, power consumption) and model performance indicators.
