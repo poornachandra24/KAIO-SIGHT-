@@ -56,6 +56,7 @@ This project uses the sample [NVIDIA PhysicalAI Autonomous Vehicles](https://hug
 |-------|---------|-------------|
 | 4-cam | Front Wide, Front Tele, Rear Left, Rear Right | 2×2 |
 | 7-cam | 4-cam + Cross Left, Cross Right, Rear Tele | 3×3 |
+<img width="1907" height="980" alt="image" src="https://github.com/user-attachments/assets/c6d5fb8c-324b-4290-bcf1-dc3b854e2ce6" />
 
 ---
 
