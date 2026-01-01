@@ -16,7 +16,7 @@
 
 > [!IMPORTANT]
 > **Experimental Research Preview**
-> This project is a research prototype designed specifically for **AMD MI300X GPUs**. It relies on bleeding-edge ROCm libraries and custom kernel optimizations. Performance and stability on other hardware (NVIDIA/Intel) are not guaranteed.
+> This project is a research prototype designed specifically for **[AMD MI300X GPUs](https://www.amd.com/en/products/accelerators/instinct/mi300/mi300x.html)**. It relies on bleeding-edge ROCm libraries and custom kernel optimizations. Performance and stability on other hardware (NVIDIA/Intel) are not guaranteed.
 
 ---
 
