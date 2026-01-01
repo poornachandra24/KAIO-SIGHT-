@@ -1,7 +1,7 @@
 # ⚡ System Design & Hardware Optimizations
 
 ## Hardware Profile
-*   **GPU:** AMD Instinct MI300X (192GB HBM3).
+*   **GPU:** [AMD Instinct MI300X (192GB HBM3)](https://www.amd.com/en/products/accelerators/instinct/mi300/mi300x.html).
 *   **Stack:** ROCm 6.4, PyTorch 2.9 (HIP), Triton 3.x.
 
 ## Optimizations Implemented
