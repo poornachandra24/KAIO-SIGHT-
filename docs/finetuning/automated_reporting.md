@@ -42,6 +42,13 @@ Records the exact hyperparameters used for the run, including:
 -   Batch Size & Gradient Accumulation
 -   Learning Rate & Optimizer
 
+
+### 4. HuggingFace Deployment
+**Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
+**Commit:** `91dbf5834c14434dc9f9b4c8c2fa242d35ab66eb` 
+**Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/91dbf5834c14434dc9f9b4c8c2fa242d35ab66eb/adapter_config.json)
+
+
 ## Dual-Logging Strategy
 
 ### 1. Local Markdown Reports
@@ -64,6 +71,9 @@ The callback generates a 6-panel chart to visualize system performance over time
 4.  **GPU Utilization**: Compute utilization percentage.
 5.  **Power Draw**: Real-time power consumption (with min/max shading).
 6.  **Temperature**: Peak junction temperature.
+
+## Huggingface Model Registry:
+Post finetuning the lora adapters are pushed to huggingface and the commit for that fine tuning run is recorded in the corresponding report.
 
 ## How to Use
 This feature is enabled by default in `src/training/trainer.py`.
