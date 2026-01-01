@@ -38,5 +38,5 @@ Training parameters are defined in `configs/finetuning_config.yaml`. The system 
 
 ## 📊 Automated Reporting
 The pipeline automatically generates detailed training reports and hardware telemetry charts.
-- **Location**: `docs/reports/run_YYYY-MM-DD_...`
+- **Location**: `docs/reports/<project_name>/`  ( earlier location: `docs/reports/run_YYYY-MM-DD_...`)
 - **Details**: See [Automated Reporting](./automated_reporting.md) for a guide on interpreting these reports.
