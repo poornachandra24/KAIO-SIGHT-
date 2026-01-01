@@ -43,10 +43,10 @@ Records the exact hyperparameters used for the run, including:
 -   Learning Rate & Optimizer
 
 
-### 4. HuggingFace Deployment
-**Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
-**Commit:** `91dbf5834c14434dc9f9b4c8c2fa242d35ab66eb` 
-**Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/91dbf5834c14434dc9f9b4c8c2fa242d35ab66eb/adapter_config.json)
+### 4. HuggingFace Deployment (example)
+- **Repo:** [Thunderbird2410/KAIO-SIGHT](https://huggingface.co/Thunderbird2410/KAIO-SIGHT)
+- **Commit:** `91dbf5834c14434dc9f9b4c8c2fa242d35ab66eb` 
+- **Adapter Config:** [adapter_config.json](https://huggingface.co/Thunderbird2410/KAIO-SIGHT/blob/91dbf5834c14434dc9f9b4c8c2fa242d35ab66eb/adapter_config.json)
 
 
 ## Dual-Logging Strategy
