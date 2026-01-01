@@ -25,6 +25,7 @@
 ## 🎯 The Problem: Spatial-Temporal Reasoning in Robotics
 
 Autonomous vehicles and mobile robots operate in a complex, 360-degree world. Traditional vision models often process cameras independently or lack the temporal context to understand *motion* and *causality*.
+![t_yqQTwuTRFiiK8--mzm3](https://github.com/user-attachments/assets/290badbe-da9c-432b-8166-9dd8c1d23c26)
 
 **Key Challenges:**
 1.  **Multi-View Synchronization**: Stitching together disjoint camera feeds (Front, Rear, Left, Right) into a coherent spatial representation.
@@ -44,6 +45,7 @@ This project leverages the massive 192GB VRAM and high memory bandwidth of the M
 
 ## 📊 Dataset
 
+
 This project uses the sample [NVIDIA PhysicalAI Autonomous Vehicles](https://huggingface.co/datasets/nvidia/PhysicalAI-Autonomous-Vehicles) dataset (full data set is 73TB +), which provides:
 
 - Multi-camera video streams (7 cameras, various FOVs)
@@ -56,6 +58,7 @@ This project uses the sample [NVIDIA PhysicalAI Autonomous Vehicles](https://hug
 |-------|---------|-------------|
 | 4-cam | Front Wide, Front Tele, Rear Left, Rear Right | 2×2 |
 | 7-cam | 4-cam + Cross Left, Cross Right, Rear Tele | 3×3 |
+
 <img width="1907" height="980" alt="image" src="https://github.com/user-attachments/assets/c6d5fb8c-324b-4290-bcf1-dc3b854e2ce6" />
 
 ---
@@ -81,6 +84,7 @@ This project uses [Comet ML](https://www.comet.com/) for comprehensive experimen
 - **Training Metrics**: Loss curves, learning rates, VRAM usage, and hardware telemetry
 - **Inference Evaluation**: Model performance across different HuggingFace commits
 - **[Inference Test Dashboard](https://www.comet.com/poornachandra24/kaio-sight-inference-test/view/new/panels)**: Live dashboard for commit evaluation results
+ <img width="1907" height="980" alt="image" src="https://github.com/user-attachments/assets/c6d5fb8c-324b-4290-bcf1-dc3b854e2ce6" />
  <img width="1905" height="882" alt="image" src="https://github.com/user-attachments/assets/f58eb59a-6d04-418d-bcf7-95806d3bb449" />
 
 All finetuning runs automatically log to Comet ML with detailed hardware metrics (VRAM, power consumption) and model performance indicators.
